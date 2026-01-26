@@ -1,0 +1,16 @@
+{
+    "name": "chatbot Dev",
+    "image": "python:3.11-slim", 
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance"
+                        ]
+        }
+    },
+    "forwardPorts": [8000,8080],
+    "remoteUser": "root",
+    "workspaceFolder": "/workspace"
+}
