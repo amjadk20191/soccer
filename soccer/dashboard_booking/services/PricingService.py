@@ -49,19 +49,24 @@ class PricingService:
     def get_percent(cls, club_id, date):
         weekday_num = date.weekday()
 
-        rules = ClubPricing.objects.filter(club_id=club_id).filter(
+        rule = ClubPricing.objects.filter(club_id=club_id).filter(
             Q(type=2, date=date) |  
             Q(type=1, day_of_week=weekday_num)  
-        ).values('type', 'percent')
+        ).values('percent').order_by('-type').values('percent').first()
 
-        date_rule = next((r for r in rules if r['type'] == 2), None)
-        if date_rule:
-            return  date_rule['percent']
+        if rule:
+            return rule['percent']
+            
+        return Decimal("1.00")
 
-        weekday_rule = next((r for r in rules if r['type'] == 1), None)
-        if weekday_rule:
-            return weekday_rule['percent']
-        return Decimal("1")
+        # date_rule = next((r for r in rules if r['type'] == 2), None)
+        # if date_rule:
+        #     return  date_rule['percent']
+
+        # weekday_rule = next((r for r in rules if r['type'] == 1), None)
+        # if weekday_rule:
+        #     return weekday_rule['percent']
+        # return Decimal("1")
 
     @classmethod
     def get_price_rule(cls, pitch:Pitch, club_id, date):
