@@ -4,7 +4,6 @@ from  player_booking.models import Booking, BookingStatus
 from dashboard_manage.models import Pitch
 
 class BookingService:
-    """Business logic for booking operations"""
     
     @staticmethod
     @transaction.atomic
@@ -30,7 +29,7 @@ class BookingService:
         # Create notification
         BookingNotification.objects.create(
             booking=booking,
-            send_by=club,
+            send_by_id=club,
             send_to=booking.player,
             old_date=booking.date,
             old_start_time=booking.start_time,
@@ -49,9 +48,11 @@ class BookingService:
     @transaction.atomic
     def reject_booking(booking):
         """Reject booking (from Pending_manager or Pending_player)"""
-        if booking.status not in [BookingStatus.PENDING_MANAGER, BookingStatus.PENDING_PLAYER]:
-            raise ValueError("Only bookings with Pending_manager or Pending_player status can be rejected")
+        if booking.status not in [BookingStatus.PENDING_MANAGER, BookingStatus.PENDING_PLAYER, BookingStatus.PENDING_PAY]:
+            raise ValueError("Only bookings with Pending_manager or Pending_player or Pending_pay status can be rejected")
         
         booking.status = BookingStatus.REJECT
         booking.save(update_fields=['status', 'updated_at'])
         return booking
+    
+

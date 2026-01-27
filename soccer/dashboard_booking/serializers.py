@@ -3,21 +3,20 @@ from django.contrib.auth import get_user_model
 from .models import  BookingNotification
 from  player_booking.models import Booking, BookingStatus
 from dashboard_manage.models import Pitch
-
+from dashboard_booking.services.PricingService import PricingService
 
 User = get_user_model()
 
 
-class BookingListSerializer(serializers.ModelSerializer):
-    """Minimal serializer for listing bookings by day and pitch"""
+class BookingListSerializer(serializers.ModelSerializer):    
+    player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     
     class Meta:
         model = Booking
-        fields = ['start_time', 'end_time', 'price', 'status']
-
-
+        fields = [
+            'id', 'start_time', 'end_time', 'price', 'status','player_name'
+        ]
 class BookingDetailSerializer(serializers.ModelSerializer):
-    """Detailed serializer for single booking view"""
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     pitch_name = serializers.CharField(source='pitch.name', read_only=True)
     
@@ -31,35 +30,32 @@ class BookingDetailSerializer(serializers.ModelSerializer):
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating bookings"""
     username = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     
     class Meta:
         model = Booking
-        fields = ['pitch', 'date', 'start_time', 'end_time', 'price', 'username']
+        fields = ['pitch', 'date', 'start_time', 'end_time', 'username']
     
-    def validate_username(self, value):
-        """Validate and get user from username"""
+    def is_valid_username(self, value):
+
         if value:
             try:
                 user = User.objects.get(username=value)
                 return user
             except User.DoesNotExist:
+
                 raise serializers.ValidationError(f"User with username '{value}' does not exist.")
-        return None
-    
+        
     def validate_pitch(self, value):
-        """Ensure pitch belongs to manager's club"""
         club_id = self.context['request'].auth.get('club_id')
-        if value.club_id != club_id:
+
+        if str(value.club_id) != club_id:
             raise serializers.ValidationError("Pitch does not belong to your club.")
         return value
     
     def validate(self, attrs):
-        """Validate booking time slot"""
         if attrs['start_time'] >= attrs['end_time']:
             raise serializers.ValidationError("End time must be after start time.")
-        
         # Check for overlapping bookings
         pitch = attrs['pitch']
         date = attrs['date']
@@ -84,24 +80,25 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         username = validated_data.pop('username', None)
-        user = self.validate_username(username) if username else None
-        
+        user = self.is_valid_username(username) if username else None
+        print(validated_data)
+        price=PricingService.calculate_final_price(validated_data['pitch'], validated_data['pitch'].club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
+        print(price)
         booking = Booking.objects.create(
             player=user,
+            status =4,
+            price=price,
             **validated_data
         )
         return booking
 
 
-class BookingUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating booking fields"""
-    
+class BookingUpdateSerializer(serializers.ModelSerializer):    
     class Meta:
         model = Booking
         fields = ['date', 'start_time', 'end_time', 'price']
     
     def validate(self, attrs):
-        """Validate booking time slot"""
         start_time = attrs.get('start_time', self.instance.start_time)
         end_time = attrs.get('end_time', self.instance.end_time)
         

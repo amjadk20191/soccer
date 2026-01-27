@@ -56,7 +56,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     
     # Personal Information
     full_name = models.CharField(max_length=255, verbose_name=_('Full Name'))
-    username = models.CharField(max_length=150, verbose_name=_('Username'))
+    username = models.CharField(max_length=150, verbose_name=_('Username'), unique=True)
     
     # Contact Information
     phone_validator = RegexValidator(regex=r'^09\d{8}$', message=_('Phone number must start with "09" and contain exactly 10 digits (e.g., 0912345678).'))
