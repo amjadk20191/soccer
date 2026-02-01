@@ -1,8 +1,9 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
-router = DefaultRouter()
+from .views import ActiveClubListAPIView, ClubOpeningPrices
+
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path("clubs/", ActiveClubListAPIView.as_view(), name="active-club-list"),
+    path('club-opening-prices/', ClubOpeningPrices, name="club-opening-prices"),
 ]

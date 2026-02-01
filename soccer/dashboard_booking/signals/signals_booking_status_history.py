@@ -8,7 +8,6 @@ from dashboard_booking.models import BookingStatusHistory
 @receiver(post_save, sender=Booking, dispatch_uid="bookin_status_history_update_signal")
 def bookin_status_history_created(sender, instance, created, **kwargs):
     update_fields = kwargs.get("update_fields")
-    print(update_fields)
     if created or (update_fields and "status" in list(update_fields)):
 
         try:

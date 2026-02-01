@@ -8,7 +8,7 @@ class ClubManagerSerializer(serializers.ModelSerializer):
             'id',  'name', 'description', 'address', 
             'latitude', 'longitude', 'open_time', 'close_time', 
             'working_days', 'logo', 'rating_avg', 'rating_count', 
-            'flexible_reservation'
+            'flexible_reservation','is_active'
         ]
         read_only_fields = [
             'id', 

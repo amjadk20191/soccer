@@ -78,7 +78,7 @@ class TeamAdmin(admin.ModelAdmin):
         }),
     )
     
-    inlines = [TeamMemberInline]
+    # inlines = [TeamMemberInline]
     
     actions = ['toggle_challenge_mode', 'toggle_active_status']
     

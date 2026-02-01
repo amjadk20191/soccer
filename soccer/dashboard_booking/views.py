@@ -11,7 +11,8 @@ from .serializers import (
     BookingDetailSerializer,
     BookingCreateSerializer,
     BookingUpdateSerializer,
-    BookingRescheduleSerializer
+    BookingRescheduleSerializer,
+    BookingSlotFilterSerializer
 )
 # from .permissions import IsClubManager
 from dashboard_booking.services.BookingService import BookingService
@@ -41,11 +42,11 @@ class BookingViewSet(viewsets.ModelViewSet):
             return BookingRescheduleSerializer
         return BookingDetailSerializer
     
+
+    """
     @action(detail=False, methods=['get'], url_path='by-day-pitch')
     def by_day_pitch(self, request):
-        """
-        GET: List all bookings for a specific day and pitch
-        """
+
         club_id = request.auth.get('club_id')
         date = request.query_params.get('date')
         pitch_id = request.query_params.get('pitch_id')
@@ -70,7 +71,42 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(bookings, many=True)
         return Response(serializer.data)
+    """
+
+
+    @action(detail=False, methods=['get'], url_path='by-day-time-pitch')
+    def by_day_time_pitch(self, request):
+        """
+        GET: List all bookings for a specific day, time and pitch
+        """
+        input_serializer = BookingSlotFilterSerializer(data=request.query_params)
+        input_serializer.is_valid(raise_exception=True)
+        
+        params = input_serializer.validated_data
+        
+        club_id = request.auth.get('club_id')
+        date = params['date']
+        time_from = params.get('time_from', None)
+        time_to = params.get('time_to', None)
+        pitch_id = params['pitch_id']        
+        
+        bookings = Booking.objects.filter(
+                    pitch_id=pitch_id,
+                    pitch__club_id=club_id,
+                    date=date
+                ).select_related('player').order_by('start_time')
+        
+
+        if time_to and time_from:
+            bookings=bookings.filter(
+                start_time__lt=time_to, 
+                end_time__gt=time_from
+            )
+            
+        serializer = self.get_serializer(bookings, many=True)
+        return Response(serializer.data)
     
+
     @action(detail=True, methods=['patch'], url_path='convert-to-pending-pay')
     def convert_to_pending_pay(self, request, pk=None):
         """

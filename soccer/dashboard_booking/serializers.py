@@ -10,24 +10,26 @@ User = get_user_model()
 
 class BookingListSerializer(serializers.ModelSerializer):    
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
-    
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
     class Meta:
         model = Booking
         fields = [
-            'id', 'start_time', 'end_time', 'price', 'status','player_name'
+            'id', 'start_time', 'end_time', 'price', 'status_display', 'player_name'
         ]
+
 class BookingDetailSerializer(serializers.ModelSerializer):
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     pitch_name = serializers.CharField(source='pitch.name', read_only=True)
-    
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
     class Meta:
         model = Booking
         fields = [
-            'id', 'date', 'start_time', 'end_time', 'price', 'status',
+            'id', 'date', 'start_time', 'end_time', 'price', 'status_display',
             'created_at', 'updated_at', 'player_name', 'pitch_name'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
@@ -81,9 +83,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         username = validated_data.pop('username', None)
         user = self.is_valid_username(username) if username else None
-        print(validated_data)
         price=PricingService.calculate_final_price(validated_data['pitch'], validated_data['pitch'].club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
-        print(price)
         booking = Booking.objects.create(
             player=user,
             status =4,
@@ -91,7 +91,6 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return booking
-
 
 class BookingUpdateSerializer(serializers.ModelSerializer):    
     class Meta:
@@ -107,7 +106,6 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
         
         return attrs
 
-
 class BookingRescheduleSerializer(serializers.Serializer):
     """Serializer for rescheduling booking (Pending_manager -> Pending_player)"""
     new_date = serializers.DateField()
@@ -118,3 +116,16 @@ class BookingRescheduleSerializer(serializers.Serializer):
         if attrs['new_start_time'] >= attrs['new_end_time']:
             raise serializers.ValidationError("End time must be after start time.")
         return attrs
+    
+class BookingSlotFilterSerializer(serializers.Serializer):
+    date = serializers.DateField(format='%Y-%m-%d')
+    pitch_id = serializers.UUIDField()
+    time_from = serializers.TimeField(format='%H:%M', required=False)
+    time_to = serializers.TimeField(format='%H:%M', required=False)
+   
+    def validate(self, data):
+
+        if data.get('from_time') and data.get('to_time'):
+            if data['from_time'] >= data['to_time']:
+                raise serializers.ValidationError("from_time must be before to_time")
+        return data

@@ -4,7 +4,7 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-
+from rest_framework.exceptions import ValidationError 
 import uuid
 
 
@@ -23,7 +23,7 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, phone, password=None, **extra_fields):
         """Create and save a regular user"""
         if not phone:
-            raise ValueError(_('phone is required'))
+            raise ValidationError(_('phone is required'))
         
         
         user = self.model(phone=phone, **extra_fields)

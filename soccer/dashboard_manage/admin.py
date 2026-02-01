@@ -34,7 +34,7 @@ class ClubAdmin(admin.ModelAdmin):
     
     list_display = (
         'name', 'manager', 'address', 'open_time', 'close_time',
-        'rating_avg', 'rating_count', 'flexible_reservation', 'created_at'
+        'rating_avg', 'rating_count', 'flexible_reservation', 'created_at', 'is_active'
     )
     list_filter = (
         'flexible_reservation', 'created_at', 'updated_at',
@@ -92,8 +92,8 @@ class ClubPricingAdmin(admin.ModelAdmin):
     def get_scheduled_date(self, obj):
         """Display either day_of_week or date based on type"""
         if obj.type == 1:  # Weekday
-            weekdays = ['', _('Monday'), _('Tuesday'), _('Wednesday'), 
-                       _('Thursday'), _('Friday'), _('Saturday'), _('Sunday')]
+            weekdays = [_('Saturday'), _('Sunday'), _('Monday'), _('Tuesday'), _('Wednesday'), 
+                       _('Thursday'), _('Friday')]
             day_num = obj.day_of_week or 0
             return weekdays[day_num] if day_num < len(weekdays) else f"Day {day_num}"
         else:  # Date
