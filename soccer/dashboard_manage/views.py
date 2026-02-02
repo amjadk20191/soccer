@@ -118,7 +118,8 @@ class PitchViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         
         updated_count = self.get_queryset().filter(pk=pk).update(
-            is_active=serializer.validated_data['is_active']
+            is_active=serializer.validated_data['is_active'],
+            updated_at=timezone.now()
         )
 
         if not updated_count:

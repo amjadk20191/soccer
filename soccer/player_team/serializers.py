@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, TeamMember, MemberStatus
+from .models import Team, TeamMember, MemberStatus, Request
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):
@@ -117,3 +117,162 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
             status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE]
         ).count()
 
+
+class InvitePlayerSerializer(serializers.Serializer):
+    """
+    Serializer for captain to invite a player to team.
+    """
+    username = serializers.CharField(required=True, help_text="Username of the player to invite")
+    
+    def validate_username(self, value):
+        """Validate username is not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Username cannot be empty.")
+        return value.strip()
+
+
+class InvitationResponseSerializer(serializers.Serializer):
+    """
+    Serializer for invitation request response.
+    """
+    request_id = serializers.UUIDField(required=True, help_text="UUID of the invitation request")
+    accept = serializers.BooleanField(required=True, help_text="True to accept, False to reject")
+
+
+class InvitationRequestSerializer(serializers.ModelSerializer):
+    """
+    Serializer for invitation request details.
+    Includes recruitment post data when available (is_open=True, post_type=2).
+    """
+    team_id = serializers.UUIDField(source='team.id', read_only=True)
+    team_name = serializers.CharField(source='team.name', read_only=True)
+    team_logo = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    recruitment_post_type = serializers.SerializerMethodField()
+    recruitment_post_description = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Request
+        fields = [
+            'id',
+            'team_id',
+            'team_name',
+            'team_logo',
+            'status_display',
+            'recruitment_post_type',
+            'recruitment_post_description',
+            'created_at'
+        ]
+        read_only_fields = ['id', 'status', 'created_at']
+    
+    def get_team_logo(self, obj):
+        """Get team logo URL, building absolute URL if request context is available"""
+        if obj.team and obj.team.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.team.logo.url)
+            return obj.team.logo.url
+        return None
+    
+    def get_recruitment_post_type(self, obj):
+        """Get recruitment post type if available and conditions are met"""
+        if obj.recruitment_post and obj.recruitment_post.is_open and obj.recruitment_post.post_type == 2:
+            return obj.recruitment_post.type
+        return None
+    
+    def get_recruitment_post_description(self, obj):
+        """Get recruitment post description if available and conditions are met"""
+        if obj.recruitment_post and obj.recruitment_post.is_open and obj.recruitment_post.post_type == 2:
+            return obj.recruitment_post.description
+        return None
+
+
+class UserSearchSerializer(serializers.Serializer):
+    """
+    Serializer for user search filter.
+    """
+    username = serializers.CharField(required=True, help_text="Username filter to search for users")
+    
+    def validate_username(self, value):
+        """Validate username filter is not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Username filter cannot be empty.")
+        return value.strip()
+
+
+class UserSearchResultSerializer(serializers.Serializer):
+    """
+    Serializer for user search results.
+    """
+    id = serializers.UUIDField(read_only=True)
+    username = serializers.CharField(read_only=True)
+    full_name = serializers.CharField(read_only=True)
+
+
+class RemovePlayerSerializer(serializers.Serializer):
+    """
+    Serializer for captain to remove a player from team.
+    """
+    player_id = serializers.UUIDField(required=True, help_text="UUID of the player to remove from team")
+
+
+class TeamCreateSerializer(serializers.Serializer):
+    """
+    Serializer for creating a new team.
+    """
+    name = serializers.CharField(required=True, max_length=100, help_text="Team name")
+    logo = serializers.ImageField(required=False, allow_null=True, help_text="Team logo image")
+    time = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team time preference")
+    address = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team address")
+    
+    def validate_name(self, value):
+        """Validate team name is not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Team name cannot be empty.")
+        return value.strip()
+
+
+class TeamUpdateSerializer(serializers.Serializer):
+    """
+    Serializer for updating team information (PATCH).
+    All fields are optional.
+    """
+    name = serializers.CharField(required=False, max_length=100, allow_blank=False, help_text="Team name")
+    logo = serializers.ImageField(required=False, allow_null=True, help_text="Team logo image")
+    time = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team time preference")
+    address = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team address")
+    challenge_mode = serializers.BooleanField(required=False, help_text="Challenge mode enabled")
+    
+
+
+class TeamResponseSerializer(serializers.ModelSerializer):
+    """
+    Serializer for team response data.
+    """
+    logo = serializers.SerializerMethodField()
+    captain_id = serializers.UUIDField(source='captain.id', read_only=True)
+    
+    class Meta:
+        model = Team
+        fields = [
+            'id',
+            'name',
+            'logo',
+            'time',
+            'address',
+            'captain_id',
+            'challenge_mode',
+            'is_active',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'is_active', 'created_at', 'updated_at']
+    
+    def get_logo(self, obj):
+        """Get team logo URL, building absolute URL if request context is available"""
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None

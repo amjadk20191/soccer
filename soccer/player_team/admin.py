@@ -208,14 +208,10 @@ class RequestAdmin(admin.ModelAdmin):
         return _("Unknown")
     get_requester.short_description = _('Requester')
     
-    def get_recruitment_type(self, obj):
-        """Display recruitment post type"""
-        return obj.recruitment_post.type
-    get_recruitment_type.short_description = _('Recruitment Type')
+
     
     list_display = (
-        'id', 'recruitment_post', 'get_requester',
-        'get_recruitment_type', 'created_at'
+        'id', 'recruitment_post', 'get_requester', 'created_at'
     )
     list_filter = (
         'created_at', 'recruitment_post__type', 'recruitment_post__is_open'

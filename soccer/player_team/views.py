@@ -6,7 +6,20 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db.models import Prefetch
 from .models import Team, TeamMember, MemberStatus
-from .serializers import UserTeamListSerializer, TeamDetailsSerializer
+from .serializers import (
+    UserTeamListSerializer, 
+    TeamDetailsSerializer,
+    InvitePlayerSerializer,
+    InvitationResponseSerializer,
+    InvitationRequestSerializer,
+    UserSearchSerializer,
+    UserSearchResultSerializer,
+    RemovePlayerSerializer,
+    TeamCreateSerializer,
+    TeamUpdateSerializer,
+    TeamResponseSerializer
+)
+from player_team.services import TeamInvitationService, TeamService
 
 
 class UserTeamsListView(APIView):
@@ -143,3 +156,341 @@ class TeamDetailsView(APIView):
         serializer = TeamDetailsSerializer(team, context={'request': request})
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class InvitePlayerView(APIView):
+    """
+    API endpoint for captain to invite a player to join the team.
+    
+    Only the team captain can invite players.
+    Creates a Request with PENDING status and null recruitment_post.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, team_id):
+        """
+        Invite a player to join the team by username.
+        
+        Args:
+            team_id: UUID of the team
+            
+        Body:
+            {
+                "username": "player_username"
+            }
+        """
+        # Get user ID from JWT token (fast access)
+        captain_id = request.user.id
+        
+        # Validate input
+        serializer = InvitePlayerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username']
+        
+        # Invite player using service
+        TeamInvitationService.invite_player_to_team(
+            captain_id=captain_id,
+            team_id=team_id,
+            username=username
+        )
+        
+        
+        return Response({
+            'message': f'Invitation sent to {username}'      
+              }, status=status.HTTP_201_CREATED)
+
+
+class RespondToInvitationView(APIView):
+    """
+    API endpoint for player to accept or reject a team invitation.
+    
+    If accepted, creates a TeamMember with ACTIVE status.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Accept or reject a team invitation.
+        
+        Body:
+            {
+                "request_id": "uuid",
+                "accept": true/false
+            }
+        """
+        # Get user ID from JWT token (fast access)
+        player_id = request.user.id
+        
+        # Validate input
+        serializer = InvitationResponseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        request_id = serializer.validated_data['request_id']
+        accept = serializer.validated_data['accept']
+        
+        # Process invitation response using service
+        TeamInvitationService.respond_to_invitation(
+            player_id=player_id,
+            request_id=request_id,
+            accept=accept
+        )
+        
+        
+        return Response({'message': 'Invitation accepted' if accept else 'Invitation rejected',}, status=status.HTTP_200_OK)
+
+
+class MyInvitationsView(APIView):
+    """
+    API endpoint to get all invitation requests for the authenticated user.
+    
+    Returns all invitations (pending, accepted, rejected) sent to the user.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Get all invitation requests for the authenticated user.
+        
+        Returns invitations ordered by most recent first.
+        """
+        # Get user ID from JWT token (fast access)
+        player_id = request.user.id
+        
+        # Get invitations using service
+        invitations = TeamInvitationService.get_user_invitations(player_id=player_id)
+        
+        # Serialize response
+        serializer = InvitationRequestSerializer(invitations, many=True, context={'request': request})
+        
+        return Response(serializer.data,
+             status=status.HTTP_200_OK)
+
+
+class SearchUsersView(APIView):
+    """
+    API endpoint to search users by username filter.
+    
+    Returns top 10 matching users based on username filter.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Search users by username filter.
+        
+        Query params:
+            username: Username filter (required)
+        """
+        # Validate query parameter
+        serializer = UserSearchSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        username_filter = serializer.validated_data['username']
+        
+        # Search users using service (returns top 10)
+        users = TeamInvitationService.search_users_by_username(
+            username_filter=username_filter,
+            limit=10
+        )
+        
+        
+        return Response(
+            {"users":users} 
+         , status=status.HTTP_200_OK)
+
+
+class RemovePlayerView(APIView):
+    """
+    API endpoint for captain to remove a player from the team.
+    
+    Only the team captain can remove players.
+    Sets player status to OUT and records leave_at timestamp.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, team_id):
+        """
+        Remove a player from the team.
+        
+        Args:
+            team_id: UUID of the team
+            
+        Body:
+            {
+                "player_id": "uuid"
+            }
+        """
+        # Get user ID from JWT token (fast access)
+        captain_id = request.user.id
+        
+        # Validate input
+        serializer = RemovePlayerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        player_id_to_remove = serializer.validated_data['player_id']
+        
+        # Remove player using service
+        team_member = TeamInvitationService.remove_player_from_team(
+            user_id=captain_id,
+            team_id=team_id,
+            player_id_to_remove=player_id_to_remove
+        )
+        
+        return Response({
+            'message': 'Player removed from team successfully',
+            'team_member_id': str(team_member.id),
+            'status': team_member.status,
+            'leave_at': team_member.leave_at
+        }, status=status.HTTP_200_OK)
+
+
+class LeaveTeamView(APIView):
+    """
+    API endpoint for player to leave a team (set their own status to OUT).
+    
+    Player can remove themselves from any team they belong to.
+    Sets status to OUT and records leave_at timestamp.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, team_id):
+        """
+        Player leaves the team (removes themselves).
+        
+        Args:
+            team_id: UUID of the team
+        """
+        # Get user ID from JWT token (fast access)
+        player_id = request.user.id
+        
+        # Remove player using service (player_id_to_remove=None means self-removal)
+        team_member = TeamInvitationService.remove_player_from_team(
+            user_id=player_id,
+            team_id=team_id,
+            player_id_to_remove=None
+        )
+        
+        return Response({
+            'message': 'You have left the team successfully',
+            'team_member_id': str(team_member.id),
+            'status': team_member.status,
+            'leave_at': team_member.leave_at
+        }, status=status.HTTP_200_OK)
+
+
+class CreateTeamView(APIView):
+    """
+    API endpoint for authenticated user to create a new team.
+    
+    The authenticated user becomes the team captain.
+    Creates both Team and TeamMember records.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Create a new team.
+        
+        Body:
+            {
+                "name": "Team Name",
+                "logo": <image file> (optional),
+                "time": "Time preference" (optional),
+                "address": "Address" (optional)
+            }
+        """
+        # Get user ID from JWT token (fast access)
+        captain_id = request.user.id
+        
+        # Validate input
+        serializer = TeamCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Create team using service
+        TeamService.create_team(
+            captain_id=captain_id,
+            name=serializer.validated_data['name'],
+            logo=serializer.validated_data.get('logo'),
+            time=serializer.validated_data.get('time'),
+            address=serializer.validated_data.get('address')
+        )
+        
+        # Serialize response
+        
+        return Response({
+            'message': 'Team created successfully',
+        }, status=status.HTTP_201_CREATED)
+
+
+class UpdateTeamView(APIView):
+    """
+    API endpoint for captain to update team information.
+    
+    Only the team captain can update team information.
+    Supports partial updates (PATCH).
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def patch(self, request, team_id):
+        """
+        Update team information.
+        
+        Args:
+            team_id: UUID of the team
+            
+        Body (all fields optional):
+            {
+                "name": "New Team Name",
+                "logo": <image file>,
+                "time": "New time",
+                "address": "New address",
+                "challenge_mode": true/false
+            }
+        """
+        # Get user ID from JWT token (fast access)
+        captain_id = request.user.id
+        
+        # Validate input
+        serializer = TeamUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Update team using service
+        TeamService.update_team(
+            captain_id=captain_id,
+            team_id=team_id,
+            **serializer.validated_data
+        )
+        
+        # Serialize response
+        
+        return Response({
+            'message': 'Team updated successfully',
+        }, status=status.HTTP_200_OK)
+
+
+class DeleteTeamView(APIView):
+    """
+    API endpoint for captain to deactivate a team (soft delete).
+    
+    Sets is_active=False instead of hard deletion.
+    Only the team captain can deactivate the team.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def delete(self, request, team_id):
+        """
+        Deactivate a team (soft delete).
+        
+        Args:
+            team_id: UUID of the team
+        """
+        # Get user ID from JWT token (fast access)
+        captain_id = request.user.id
+        
+        # Deactivate team using service
+        team = TeamService.deactivate_team(
+            captain_id=captain_id,
+            team_id=team_id
+        )
+        
+        return Response({
+            'message': 'Team deactivated successfully',
+            'team_id': str(team.id)
+        }, status=status.HTTP_200_OK)

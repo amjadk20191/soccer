@@ -79,6 +79,7 @@ class TeamMember(models.Model):
         indexes = [
             models.Index(fields=['team']),
             models.Index(fields=['player']),
+            models.Index(fields=['player', 'status']),
         ]
 
 
@@ -90,7 +91,14 @@ class RecruitmentPost(models.Model):
     player = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     description = models.TextField()
     is_open = models.BooleanField(default=True)
-    type = models.CharField(max_length=50)# GK ....
+    type = models.SmallIntegerField(
+        choices=[
+            (1, _('هجوم')),
+            (2, _('وسط')),
+            (3, _('دفاع')),
+            (4, _('حارس'))
+            ]
+    )# GK ....
     created_at = models.DateTimeField(auto_now_add=True)
 
     
@@ -108,10 +116,13 @@ class RecruitmentPost(models.Model):
 class Request(models.Model):
     """Requests for team joining or recruitment"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    recruitment_post = models.ForeignKey(RecruitmentPost, on_delete=models.CASCADE)
+    recruitment_post = models.ForeignKey(RecruitmentPost, on_delete=models.CASCADE, blank=True, null=True)
     team = models.ForeignKey(Team, on_delete=models.CASCADE, null=True, blank=True)
     player = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    status = models.SmallIntegerField(choices=[(1, _('Pending')), (2, _('Accepted')), (3, _('Rejected'))])
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 
     
     class Meta:

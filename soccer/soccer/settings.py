@@ -165,4 +165,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATIC_URL = '/api/static/static_api/'
 MEDIA_URL = '/api/static/media/'
 MEDIA_ROOT =  os.path.join(BASE_DIR,'api/static/media')
+
+# Team Configuration
+MAX_TEAM_MEMBERS = 7  # Maximum number of active members allowed in a team
+MAX_TEAMS = 5
 STATIC_ROOT =  os.path.join(BASE_DIR,'api/static/static_api')

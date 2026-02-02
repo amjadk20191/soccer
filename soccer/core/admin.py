@@ -41,7 +41,7 @@ class UserAdmin(BaseUserAdmin):
     )
     
     # List view configuration
-    list_display = ('phone', 'full_name', 'username', 'role', 'is_staff', 'is_active', 'age', 'created_at')
+    list_display = ('pk', 'phone', 'full_name', 'username', 'role', 'is_staff', 'is_active', 'age', 'created_at')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'role', 'foot_preference', 'created_at')
     search_fields = ('phone', 'full_name', 'username')
     ordering = ('-created_at',)

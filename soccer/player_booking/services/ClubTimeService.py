@@ -38,15 +38,15 @@ class ClubTimeService:
         pitches = Pitch.objects.filter(club_id=club_id).values('id', 'name', 'price_first',
                                                                 'price_second', 'time_interval', 'type',
                                                                 'size_high', 'size_width', 'image','is_active'
-                                                                ).order_by('type', 'name')
+                                                                ).order_by('type', 'name')  
         
         # Get daily configurations: for each date, get the pricing multiplier (percent) 
         # and opening/closing times based on club defaults and any exceptions
         time_percents = cls.get_opening_time_with_percent(club_id, number_of_day)
-        
+
         # Pre-define quantizer for price rounding (round to 2 decimal places)
         quantizer = Decimal("1.00")
-        
+
         # Build the result list: one entry per day
         opening_with_prices = []
         
@@ -84,7 +84,7 @@ class ClubTimeService:
                 }
                 
                 day_opening_with_prices['pitches'].append(pitch_entry)
-            
+
             opening_with_prices.append(day_opening_with_prices)
         
         return opening_with_prices
@@ -239,7 +239,7 @@ class ClubTimeService:
                     'end_time': close_time,  # Standard closing time
                     'weekday': weekday_idx
                 }
-        
+
         return time_percents
 
 
