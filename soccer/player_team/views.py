@@ -1,4 +1,4 @@
-from rest_framework import status
+from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -32,7 +32,7 @@ class UserTeamsListView(APIView):
     
     Shows: team_id, team_name, is_captain, is_active, joined_at
     """
-    permission_classes = [IsAuthenticated]
+
     
     def get(self, request):
         """
@@ -82,7 +82,7 @@ class TeamDetailsView(APIView):
     
     User must be a member of the team to view details.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def get(self, request, team_id):
         """
@@ -165,7 +165,7 @@ class InvitePlayerView(APIView):
     Only the team captain can invite players.
     Creates a Request with PENDING status and null recruitment_post.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def post(self, request, team_id):
         """
@@ -206,7 +206,7 @@ class RespondToInvitationView(APIView):
     
     If accepted, creates a TeamMember with ACTIVE status.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def post(self, request):
         """
@@ -244,7 +244,7 @@ class MyInvitationsView(APIView):
     
     Returns all invitations (pending, accepted, rejected) sent to the user.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def get(self, request):
         """
@@ -271,7 +271,7 @@ class SearchUsersView(APIView):
     
     Returns top 10 matching users based on username filter.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def get(self, request):
         """
@@ -304,7 +304,7 @@ class RemovePlayerView(APIView):
     Only the team captain can remove players.
     Sets player status to OUT and records leave_at timestamp.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def post(self, request, team_id):
         """
@@ -348,7 +348,7 @@ class LeaveTeamView(APIView):
     Player can remove themselves from any team they belong to.
     Sets status to OUT and records leave_at timestamp.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def post(self, request, team_id):
         """
@@ -382,7 +382,7 @@ class CreateTeamView(APIView):
     The authenticated user becomes the team captain.
     Creates both Team and TeamMember records.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def post(self, request):
         """
@@ -419,14 +419,24 @@ class CreateTeamView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-class UpdateTeamView(APIView):
+
+
+class UpdateTeamView(generics.UpdateAPIView):
+    http_method_names=['patch',]
+    serializer_class = TeamUpdateSerializer
+
+    def get_queryset(self):
+        return Team.objects.filter(captain=self.request.user, is_active=True)
+
+
+
+class _UpdateTeamView(APIView):
     """
     API endpoint for captain to update team information.
     
     Only the team captain can update team information.
     Supports partial updates (PATCH).
     """
-    permission_classes = [IsAuthenticated]
     
     def patch(self, request, team_id):
         """
@@ -472,7 +482,7 @@ class DeleteTeamView(APIView):
     Sets is_active=False instead of hard deletion.
     Only the team captain can deactivate the team.
     """
-    permission_classes = [IsAuthenticated]
+
     
     def delete(self, request, team_id):
         """

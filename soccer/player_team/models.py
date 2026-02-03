@@ -22,7 +22,7 @@ class Team(models.Model):
     address = models.CharField(max_length=255, blank=True)
     time = models.CharField(max_length=255, blank=True)
     captain = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     logo = models.ImageField(upload_to=upload_to_model_name, validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"], message="Only JPG, JPEG, PNG, and WEBP images are allowed." )])
     total_wins = models.PositiveBigIntegerField(default=0, validators=[MinValueValidator(0)])
     total_losses = models.PositiveBigIntegerField(default=0, validators=[MinValueValidator(0)])

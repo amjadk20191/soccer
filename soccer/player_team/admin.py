@@ -39,7 +39,7 @@ class TeamAdmin(admin.ModelAdmin):
     get_win_rate.short_description = _("Win Rate")
     
     list_display = (
-        'name', 'captain', 'logo_preview', 'get_total_matches',
+        'id', 'name', 'captain', 'logo_preview', 'get_total_matches',
         'get_win_rate', 'challenge_mode', 'is_active', 'created_at'
     )
     list_filter = (
@@ -57,7 +57,7 @@ class TeamAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('name', 'captain', 'address', 'time', 'logo')
+            'fields': ('id', 'name', 'captain', 'address', 'time', 'logo')
         }),
         (_('Team Statistics'), {
             'fields': (

@@ -186,7 +186,7 @@ class TeamInvitationService:
                 
                 # Check if team has reached maximum member limit before accepting
                 cls._check_team_member_limit(request.team_id)
-                existing_team = TeamMember.objects.only('id', 'is_active').filter(
+                existing_team = TeamMember.objects.only('id').filter(
                     player_id=player_id,
                     status=MemberStatus.ACTIVE,
                     team__is_active=True 

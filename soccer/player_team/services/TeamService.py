@@ -37,14 +37,14 @@ class TeamService:
             raise ValidationError(detail="Team name is required.")
         
         # Check if user is already in X active team
-        existing_team = TeamMember.objects.only('id', 'is_active').filter(
+        existing_team = TeamMember.objects.only('id').filter(
             player_id=captain_id,
             status=MemberStatus.ACTIVE,
             team__is_active=True 
         ).count()
         
         if existing_team > settings.MAX_TEAMS:
-            raise ValidationError(detail="You are already in 5 active team.")
+            raise ValidationError(detail={"error":"You are already in 5 active team."})
         
         # Create team and team member in a transaction
         with transaction.atomic():

@@ -216,34 +216,43 @@ class RemovePlayerSerializer(serializers.Serializer):
     player_id = serializers.UUIDField(required=True, help_text="UUID of the player to remove from team")
 
 
-class TeamCreateSerializer(serializers.Serializer):
+class TeamCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating a new team.
     """
-    name = serializers.CharField(required=True, max_length=100, help_text="Team name")
-    logo = serializers.ImageField(required=False, allow_null=True, help_text="Team logo image")
-    time = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team time preference")
-    address = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team address")
-    
+
+    class Meta:
+        model = Team
+        fields = [
+                'name',
+                'logo',
+                'time',
+                'address']
     def validate_name(self, value):
         """Validate team name is not empty"""
         if not value or not value.strip():
-            raise serializers.ValidationError("Team name cannot be empty.")
+            raise serializers.ValidationError({"name":"Team name cannot be empty."})
         return value.strip()
 
 
-class TeamUpdateSerializer(serializers.Serializer):
+class TeamUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating team information (PATCH).
     All fields are optional.
     """
-    name = serializers.CharField(required=False, max_length=100, allow_blank=False, help_text="Team name")
-    logo = serializers.ImageField(required=False, allow_null=True, help_text="Team logo image")
-    time = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team time preference")
-    address = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Team address")
-    challenge_mode = serializers.BooleanField(required=False, help_text="Challenge mode enabled")
-    
-
+    class Meta:
+        model = Team
+        fields = [
+                'name',
+                'logo',
+                'time',
+                'address',
+                'challenge_mode']
+    def validate_name(self, value):
+        """Validate team name is not empty"""
+        if not value or not value.strip():
+            raise serializers.ValidationError({"name":"Team name cannot be empty."})
+        return value.strip()
 
 class TeamResponseSerializer(serializers.ModelSerializer):
     """
@@ -276,3 +285,5 @@ class TeamResponseSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.logo.url)
             return obj.logo.url
         return None
+
+

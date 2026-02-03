@@ -37,7 +37,7 @@ urlpatterns = [
     # Create a new team
     path('create/', CreateTeamView.as_view(), name='create-team'),
     # Update team information
-    path('update/<uuid:team_id>/', UpdateTeamView.as_view(), name='update-team'),
+    path('update/<uuid:pk>/', UpdateTeamView.as_view(), name='update-team'),
     # Deactivate team (soft delete)
     path('delete/<uuid:team_id>/', DeleteTeamView.as_view(), name='delete-team'),
 ]
