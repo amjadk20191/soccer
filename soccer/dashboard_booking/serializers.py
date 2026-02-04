@@ -36,13 +36,13 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Booking
-        fields = ['pitch', 'date', 'start_time', 'end_time', 'username']
+        fields = ['pitch', 'date', 'start_time', 'end_time', 'username', 'phone', 'note_owner', 'payment_status', 'status', 'deposit']
     
     def is_valid_username(self, value):
 
         if value:
             try:
-                user = User.objects.get(username=value)
+                user = User.objects.get(username=value, role=1)
                 return user
             except User.DoesNotExist:
 
@@ -58,6 +58,11 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs['start_time'] >= attrs['end_time']:
             raise serializers.ValidationError("End time must be after start time.")
+        
+        # if the payment_status is 2 "Deposit" then deposit field should be grater than 0
+        if attrs['payment_status'] == 2 and attrs.get('deposit', 0) <= 0:
+            raise serializers.ValidationError("deposit is required and should be bigger than 0.")          
+        
         # Check for overlapping bookings
         pitch = attrs['pitch']
         date = attrs['date']
@@ -66,10 +71,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         
         overlapping = Booking.objects.filter(
             pitch=pitch,
-            date=date,
-            status__in=[
-                BookingStatus.COMPLETED
-            ]
+            date=date
         ).filter(
             start_time__lt=end_time,
             end_time__gt=start_time
@@ -80,14 +82,21 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         
         return attrs
     
-    def create(self, validated_data):
+    def create(self, validated_data:dict):
         username = validated_data.pop('username', None)
         user = self.is_valid_username(username) if username else None
         price=PricingService.calculate_final_price(validated_data['pitch'], validated_data['pitch'].club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
+        
+        if validated_data['status'] == 4:
+            validated_data.pop('payment_status')  
+        if validated_data.get('payment_status',2) != 2:
+            validated_data.pop('deposit', None)
+        
         booking = Booking.objects.create(
             player=user,
-            status =4,
+            status=4,
             price=price,
+            by_owner=True,
             **validated_data
         )
         return booking

@@ -49,7 +49,7 @@ class ClubManagerView(APIView):
     
 
 
-class BasePricingViewSet(viewsets.ModelViewSet):
+class _BasePricingViewSet(viewsets.ModelViewSet):
 
     def get_club(self):
         try:
@@ -61,7 +61,7 @@ class BasePricingViewSet(viewsets.ModelViewSet):
         serializer.save(club=self.get_club())
 
 
-class WeekdayPricingViewSet(BasePricingViewSet):
+class WeekdayPricingViewSet(_BasePricingViewSet):
     serializer_class = WeekdayPricingSerializer
 
     def get_queryset(self):
@@ -70,8 +70,7 @@ class WeekdayPricingViewSet(BasePricingViewSet):
             type=1,
         )
 
-
-class DatePricingViewSet(BasePricingViewSet):
+class DatePricingViewSet(_BasePricingViewSet):
     serializer_class = DatePricingSerializer
 
     def get_queryset(self):
@@ -83,8 +82,6 @@ class DatePricingViewSet(BasePricingViewSet):
             date__gte=current_date
 
         )
-    
-
 
 class PitchViewSet(viewsets.ModelViewSet):
     # permission_classes = [permissions.IsAuthenticated]
