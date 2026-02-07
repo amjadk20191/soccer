@@ -48,8 +48,9 @@ class BookingAdmin(admin.ModelAdmin):
     booking_duration.short_description = _('Time Slot')
     
     list_display = (
-        'id', 'pitch', 'player', 'date', 'booking_duration',
-        'price', 'status_badge', 'created_at', 'status'
+        'id', 'pitch', 'player', 'phone', 'date', 'booking_duration',
+        'price', 'status_badge', 'created_at', 'status',
+        'payment_status', 'deposit', 'note_owner', 'by_owner',
     )
     list_filter = (
         'status', 'date', 'created_at', 'updated_at',
@@ -69,8 +70,9 @@ class BookingAdmin(admin.ModelAdmin):
     fieldsets = (
         (_('Booking Details'), {
             'fields': (
-                'pitch', 'player', 'date',
-                'start_time', 'end_time', 'price', 'status'
+                'pitch', 'player', 'phone', 'date',
+                'start_time', 'end_time', 'price', 'status',
+                'payment_status', 'deposit', 'note_owner', 'by_owner',
             )
         }),
         (_('Admin Notes'), {

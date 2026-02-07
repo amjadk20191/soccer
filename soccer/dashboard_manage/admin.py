@@ -34,7 +34,7 @@ class ClubAdmin(admin.ModelAdmin):
     
     list_display = (
         'name', 'manager', 'address', 'open_time', 'close_time',
-        'rating_avg', 'rating_count', 'flexible_reservation', 'created_at', 'is_active'
+        'rating_avg', 'rating_count', 'is_active', 'flexible_reservation', 'created_at', 'is_active'
     )
     list_filter = (
         'flexible_reservation', 'created_at', 'updated_at',
@@ -52,7 +52,7 @@ class ClubAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('name', 'manager', 'description', 'logo')
+            'fields': ('name', 'manager', 'description', 'logo', 'is_active')
         }),
         (_('Location & Contact'), {
             'fields': ('address', ('latitude', 'longitude'))

@@ -5,13 +5,12 @@ from django.db.models import Q
 class PricingService:
     
     @classmethod
-    def calculate_final_price(cls, pitch:Pitch, club_id, date, start_time, end_time):
+    def calculate_final_price(cls, pitch, club_id, date, start_time, end_time):
         time_interval, price_first, price_second = cls.get_price_rule(pitch, club_id, date)
         
         total_price = cls.calculate_price(start_time, end_time, time_interval, price_first, price_second)
         return total_price.quantize(Decimal("1.00"), rounding=ROUND_HALF_UP)
     
-
     @classmethod
     def to_seconds(cls, t):
         """Helper to convert a time object to integer seconds."""
@@ -69,7 +68,7 @@ class PricingService:
         # return Decimal("1")
 
     @classmethod
-    def get_price_rule(cls, pitch:Pitch, club_id, date):
+    def get_price_rule(cls, pitch, club_id, date):
         
         time_interval=pitch.time_interval
         price_first=pitch.price_first

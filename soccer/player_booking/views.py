@@ -56,5 +56,5 @@ def ClubOpeningPrices(request):
     params = input_serializer.validated_data
     
     
-    opening_time_with_pitches_prices = ClubTimeService.get_opening_time_with_pitches_prices(params['club_id'], 10)
+    opening_time_with_pitches_prices = ClubTimeService.get_opening_time_with_pitches_prices(params['club_id'], 10, request)
     return Response(opening_time_with_pitches_prices)

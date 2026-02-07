@@ -39,7 +39,7 @@ class ClubManagerSerializer(serializers.ModelSerializer):
         
         return attrs
 
-#for 'date'
+#for 'day_of_week'
 class WeekdayPricingSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClubPricing
@@ -50,11 +50,14 @@ class WeekdayPricingSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get('request')
             
-        if request and hasattr(request, 'auth') and request.auth:
-            club_id = request.auth.payload.get('club_id')
-
-        if attrs.get('day_of_week') is None:
+        club_id = request.auth.payload.get('club_id')
+        
+        day_of_week= attrs.get('day_of_week',None)
+        if  day_of_week is None:
             raise serializers.ValidationError({"day_of_week": "This field is required."})
+        
+        if not day_of_week in [0, 1, 2, 3, 4, 5, 6]:
+            raise serializers.ValidationError({"day_of_week": "should be one of 0, 1, 2, 3, 4, 5, 6."})
         
         open_time = attrs.get('start_time')
         close_time = attrs.get('end_time')
@@ -65,16 +68,21 @@ class WeekdayPricingSerializer(serializers.ModelSerializer):
 
         if weekday:
             raise serializers.ValidationError({"error": "this weekday already exist."})
+        
+        is_day_off = Club.objects.values('working_days').filter(id=club_id).first()
+        if not is_day_off['working_days'][str(day_of_week)]:
+            raise serializers.ValidationError({"error": "this weekday is an off day."})
 
         return attrs
 
     def create(self, validated_data):
+
         validated_data['type'] = 1
         validated_data['date'] = None
         return super().create(validated_data)
 
 
-#for 'day_of_week'
+#for 'date'
 class DatePricingSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClubPricing
@@ -108,9 +116,6 @@ class DatePricingSerializer(serializers.ModelSerializer):
         validated_data['day_of_week'] = None
         return super().create(validated_data)
     
-
-
-
 
 class PitchSerializer(serializers.ModelSerializer):
     class Meta:

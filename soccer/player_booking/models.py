@@ -8,13 +8,14 @@ from dashboard_manage.models import Club
 import uuid
 
 
+
 class BookingStatus(models.IntegerChoices):
-    PENDING_MANAGER = 1, _('Pending_manager')
-    PENDING_PLAYER = 2, _('Pending_player')
+    PENDING_MANAGER = 1, _('Pending manager approval')
+    PENDING_PLAYER = 2, _('Pending player confirmation')
     PENDING_PAY = 3, _('Pending_pay')
     COMPLETED = 4, _('Completed')
     CANCELED = 5, _('Canceled')
-    REJECT = 6, _('Reject')
+    REJECT = 6, _('REJECT')
     NO_SHOW = 7, _('No-Show')
     DISPUTED = 8, _('Disputed')
     EXPIRED = 9, _('Expired')
@@ -25,6 +26,7 @@ class PayStatus(models.IntegerChoices):
     ONLINE = 3, _('Online')
     CASH = 4, _('Cash')
     UNKNOWN = 5, _('Unknown')
+
 
 
 

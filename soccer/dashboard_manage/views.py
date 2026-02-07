@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
 from django.utils import timezone
+from django.db import transaction
 
 from .models import Club, ClubPricing, Pitch
 from .serializers import ClubManagerSerializer, WeekdayPricingSerializer, DatePricingSerializer, PitchSerializer, PitchListSerializer, PitchActivationSerializer
@@ -41,13 +42,23 @@ class ClubManagerView(APIView):
     def patch(self, request):
         """Partial update club data"""
         club = self.get_object()
+        import json
+
+        working_days=request.data.get('working_days',None)
+        print(working_days)
+        if working_days:
+            working_days = json.loads(working_days)
+            false_days = [int(day) for day, is_active in working_days.items() if is_active is False]
+            day_off = ClubPricing.objects.filter(club_id=club.id, day_of_week__in=false_days).exists()
+            if day_off:
+                return Response({"error":"can not make the updated day off because there is ClubPricing active "}, status=status.HTTP_400_BAD_REQUEST)
+
+        
         serializer = ClubManagerSerializer(club, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
 
 class _BasePricingViewSet(viewsets.ModelViewSet):
 
@@ -59,7 +70,6 @@ class _BasePricingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(club=self.get_club())
-
 
 class WeekdayPricingViewSet(_BasePricingViewSet):
     serializer_class = WeekdayPricingSerializer
@@ -113,13 +123,18 @@ class PitchViewSet(viewsets.ModelViewSet):
     def set_active(self, request, pk):
         serializer = PitchActivationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        updated_count = self.get_queryset().filter(pk=pk).update(
-            is_active=serializer.validated_data['is_active'],
-            updated_at=timezone.now()
-        )
+        with transaction.atomic():
+            updated_count = self.get_queryset().filter(pk=pk).update(
+                is_active=serializer.validated_data['is_active'],
+                updated_at=timezone.now()
+            )
+           
+            if not updated_count:
+                return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        if not updated_count:
-            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-
+            if not self.get_queryset().filter(is_active=True).exists():
+                club_id = self.request.auth.get('club_id')
+                Club.objects.filter(id=club_id).update(is_active=False,
+                                                    updated_at=timezone.now())
+      
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
