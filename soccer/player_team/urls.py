@@ -11,13 +11,14 @@ from .views import (
     LeaveTeamView,
     CreateTeamView,
     UpdateTeamView,
-    DeleteTeamView
+    DeleteTeamView,
+    TeamImageListAPIView
 )
 
 router = DefaultRouter()
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('team-images/', TeamImageListAPIView.as_view(), name='team-images-list'),
     # List all teams the authenticated user belongs to
     path('my-teams/', UserTeamsListView.as_view(), name='user-teams-list'),
     # Get detailed information about a specific team
@@ -40,4 +41,7 @@ urlpatterns = [
     path('update/<uuid:pk>/', UpdateTeamView.as_view(), name='update-team'),
     # Deactivate team (soft delete)
     path('delete/<uuid:team_id>/', DeleteTeamView.as_view(), name='delete-team'),
+    
+    path('', include(router.urls)),
+
 ]

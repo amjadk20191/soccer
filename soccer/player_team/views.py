@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db.models import Prefetch
-from .models import Team, TeamMember, MemberStatus
+from .models import Team, TeamMember, MemberStatus, TeamImage
 from .serializers import (
     UserTeamListSerializer, 
     TeamDetailsSerializer,
@@ -17,10 +17,15 @@ from .serializers import (
     RemovePlayerSerializer,
     TeamCreateSerializer,
     TeamUpdateSerializer,
-    TeamResponseSerializer
+    TeamResponseSerializer,
+    TeamImageerializer
 )
 from player_team.services import TeamInvitationService, TeamService
 
+
+class TeamImageListAPIView(generics.ListAPIView):
+    queryset = TeamImage.objects.all()
+    serializer_class = TeamImageerializer
 
 class UserTeamsListView(APIView):
     """
@@ -41,31 +46,44 @@ class UserTeamsListView(APIView):
         Uses .only() for faster query performance and UserTeamListSerializer.
         """
         user = request.user
-        
-        # Get all team memberships where:
-        # - User is the player
-        # - Member status is ACTIVE
-        # - Team is active (is_active = True) - filter ensures only active teams are returned
-        # Use .only() to fetch only required fields for better performance
-        # Use select_related to avoid N+1 queries for team data
+        """
         team_memberships = TeamMember.objects.filter(
             player=user,
             status=MemberStatus.ACTIVE,
-            team__is_active=True  # Filter: only return teams where is_active = True
+            team__is_active=True  
         ).select_related('team').only(
-            # TeamMember fields needed by serializer
             'id',
             'is_captain',
             'joined_at',
             'team_id',
-            # Team fields needed by serializer (via select_related)
-            # Note: team__is_active is included for serializer response, 
-            # though it will always be True due to the filter above
             'team__id',
             'team__name',
             'team__logo',
             'team__challenge_mode'
         ).order_by('-joined_at')
+       """
+       
+        team_memberships = TeamMember.objects.filter(
+            player=user,
+            status=MemberStatus.ACTIVE,
+            team__is_active=True
+            ).select_related(
+                'team', 
+                'team__logo'  
+            ).only(
+                'id',
+                'is_captain',
+                'joined_at',
+                'team_id',
+                'team__name',
+                'team__logo__logo',     
+                'team__challenge_mode',
+                'team__total_draw',
+                'team__total_losses',
+                'team__total_wins',
+                'team__goals_scored',
+                'team__clean_sheet'
+            ).order_by('-joined_at')
         
         # Serialize the data using UserTeamListSerializer
         serializer = UserTeamListSerializer(team_memberships, many=True, context={'request': request})
@@ -100,13 +118,13 @@ class TeamDetailsView(APIView):
         # Use .only() to fetch only required fields for faster queries
         # Prefetch team members with their player information to avoid N+1 queries
         team = get_object_or_404(
-            Team.objects.only(
+            Team.objects.select_related('logo').only(
                 # Team fields needed by serializer
                 'id',
                 'name',
                 'address',
                 'time',
-                'logo',
+                'logo__logo',
                 'total_wins',
                 'total_losses',
                 'total_draw',
@@ -418,17 +436,12 @@ class CreateTeamView(APIView):
             'message': 'Team created successfully',
         }, status=status.HTTP_201_CREATED)
 
-
-
-
 class UpdateTeamView(generics.UpdateAPIView):
     http_method_names=['patch',]
     serializer_class = TeamUpdateSerializer
 
     def get_queryset(self):
         return Team.objects.filter(captain=self.request.user, is_active=True)
-
-
 
 class _UpdateTeamView(APIView):
     """
@@ -474,7 +487,6 @@ class _UpdateTeamView(APIView):
             'message': 'Team updated successfully',
         }, status=status.HTTP_200_OK)
 
-
 class DeleteTeamView(APIView):
     """
     API endpoint for captain to deactivate a team (soft delete).
@@ -504,3 +516,4 @@ class DeleteTeamView(APIView):
             'message': 'Team deactivated successfully',
             'team_id': str(team.id)
         }, status=status.HTTP_200_OK)
+

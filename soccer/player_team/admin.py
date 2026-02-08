@@ -2,7 +2,30 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import Team, TeamMember, RecruitmentPost, Request, MemberStatus
+from .models import Team, TeamMember, RecruitmentPost, Request, MemberStatus, TeamImage
+
+@admin.register(TeamImage)
+class TeamImageAdmin(admin.ModelAdmin):
+    # Display the UUID, a preview of the logo, and the file path
+    list_display = ('id', 'display_logo')
+    
+    # Allow searching by ID
+    search_fields = ('id',)
+    
+    # Read-only field for the preview so it shows up in the edit form
+    readonly_fields = ('display_logo',)
+
+    def display_logo(self, obj):
+        """Creates a small thumbnail preview of the logo for the admin list and form."""
+        if obj.logo:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: contain; border-radius: 5px; border: 1px solid #ccc;" />',
+                obj.logo.url
+            )
+        return "No Logo"
+
+    # Set the column name in the list view
+    display_logo.short_description = 'Logo Preview'
 
 
 class TeamMemberInline(admin.TabularInline):
@@ -23,7 +46,7 @@ class TeamAdmin(admin.ModelAdmin):
         if obj.logo:
             return format_html(
                 '<img src="{}" width="50" height="50" style="object-fit: cover; border-radius: 5px;" />',
-                obj.logo.url
+                obj.logo.logo.url
             )
         return _("No logo")
     logo_preview.short_description = _("Logo")

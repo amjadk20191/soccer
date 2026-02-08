@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from .models import Team, TeamMember, MemberStatus, Request
+from .models import Team, TeamMember, MemberStatus, Request, TeamImage
+
+class TeamImageerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeamImage
+        fields = ['id', 'logo']
 
 
 class TeamMemberSerializer(serializers.ModelSerializer):
@@ -34,18 +39,23 @@ class UserTeamListSerializer(serializers.ModelSerializer):
     team_logo = serializers.SerializerMethodField()
     challenge_mode = serializers.BooleanField(source='team.challenge_mode', read_only=True)
     joined_at = serializers.DateTimeField(read_only=True)
+    win_rate = serializers.FloatField(source='team.win_rate', read_only=True)
+    clean_sheet = serializers.FloatField(source='team.clean_sheet', read_only=True)
+    goals_scored = serializers.FloatField(source='team.goals_scored', read_only=True)
+
     
     class Meta:
         model = TeamMember
-        fields = ['team_id', 'team_name', 'team_logo', 'is_captain', 'challenge_mode', 'joined_at']
+        fields = ['team_id', 'team_name', 'team_logo', 'is_captain', 'challenge_mode', 'joined_at', 'win_rate', 'clean_sheet', 'goals_scored']
     
     def get_team_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
-        if obj.team.logo:
+        if obj.team.logo.logo:
+            logo = obj.team.logo.logo
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.team.logo.url)
-            return obj.team.logo.url
+                return request.build_absolute_uri(logo.url)
+            return logo.url
         return None
 
 class TeamDetailsSerializer(serializers.ModelSerializer):
@@ -85,11 +95,13 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
     
     def get_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
-        if obj.logo:
+        if obj.logo.logo:
+            logo = obj.logo.logo
+
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.logo.url)
-            return obj.logo.url
+                return request.build_absolute_uri(logo.url)
+            return logo.url
         return None
     
 
@@ -116,7 +128,6 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
             team=obj,
             status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE]
         ).count()
-
 
 class InvitePlayerSerializer(serializers.Serializer):
     """
