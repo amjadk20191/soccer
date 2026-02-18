@@ -1,5 +1,53 @@
 from rest_framework import serializers
-from .models import Club, ClubPricing, Pitch
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment
+from .services import EquipmentManageService
+
+
+
+
+
+class CreateClubEquipmentSerializer(serializers.ModelSerializer):
+    equipment_id = serializers.UUIDField()
+    class Meta:
+        model = ClubEquipment
+        fields = ['equipment_id', 'quantity','price' ,'is_active']
+        extra_kwargs = {
+            'is_active': {
+                'required': False,
+            }
+        }
+    def create(self, validated_data):
+        
+        club_id = self.context['request'].auth.get('club_id')
+        equipment = EquipmentManageService.create_equipment(validated_data['equipment_id'], club_id, validated_data['quantity'])
+        return equipment
+
+
+class ShowClubEquipmentSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+    name = serializers.CharField(source='equipment.name', read_only=True)
+    description = serializers.CharField(source='equipment.description', read_only=True)
+
+    class Meta:
+        model = ClubEquipment
+        fields = ['id', 'name', 'description','price' , 'quantity', 'image', 'is_active']
+
+    def get_image(self, obj):
+
+        if obj.equipment.image:
+            image = obj.equipment.image
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(image.url)
+            return image.url
+        return None
+
+
+class ReadEquipmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Equipment
+        fields = ['id', 'name', 'description', 'image']
+
 
 class ClubManagerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -81,7 +129,6 @@ class WeekdayPricingSerializer(serializers.ModelSerializer):
         validated_data['date'] = None
         return super().create(validated_data)
 
-
 #for 'date'
 class DatePricingSerializer(serializers.ModelSerializer):
     class Meta:
@@ -125,8 +172,6 @@ class PitchSerializer(serializers.ModelSerializer):
             'price_first', 'price_second', 'time_interval', 'is_active'
         ]
         read_only_fields = ['id', 'is_active']
-
-
 
 class PitchListSerializer(serializers.ModelSerializer):
     class Meta:

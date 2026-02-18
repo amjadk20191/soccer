@@ -5,7 +5,8 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from core.models import User
 from ..models import Team, TeamMember, Request, MemberStatus
-
+from django.db.models import Q
+from django.db.models import Case, When, Value, CharField, Exists, OuterRef
 
 class RequestStatus:
     """Request status constants"""
@@ -258,7 +259,7 @@ class TeamInvitationService:
         return invitations
     
     @classmethod
-    def search_users_by_username(cls, username_filter, limit=10):
+    def search_users_by_username(cls, current_team, username_filter, limit=10):
         """
         Search users by username filter and return top matching users.
         
@@ -272,13 +273,48 @@ class TeamInvitationService:
         if not username_filter or not username_filter.strip():
             return User.objects.none()
         
-        # Search for users whose username contains the filter (case-insensitive)
-        # Order by username for consistent results
-        users = User.objects \
-                .filter(username__icontains=username_filter.strip()) \
-                .order_by('username') \
-                .values_list('username', flat=True)[:limit]
-        
+
+        # 1. First Query: Get the base list of users
+        users = list(
+            User.objects.filter(
+                username__icontains=username_filter.strip(), 
+                role=1, 
+                is_active=True
+            )
+            .order_by('username')
+            .values('id', 'username', 'full_name')[:limit]
+        )
+
+        # Extract IDs to use in the next two queries
+        user_ids = [u['id'] for u in users]
+
+        # 2. Second Query: Get IDs of users who are already members
+        member_ids = set(
+            TeamMember.objects.filter(
+                player_id__in=user_ids,
+                team_id=current_team,
+                status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE]
+            ).values_list('player_id', flat=True)
+        )
+
+        # 3. Third Query: Get IDs of users with pending requests
+        pending_ids = set(
+            Request.objects.filter(
+                player_id__in=user_ids,
+                team_id=current_team,
+                status=1  # Pending
+            ).values_list('player_id', flat=True)
+        )
+
+        # Final Step: Map the statuses back to the user dictionaries (Python logic)
+        for user in users:
+            if user['id'] in member_ids:
+                user['connection_status'] = 'in_team'
+            elif user['id'] in pending_ids:
+                user['connection_status'] = 'pending'
+            else:
+                user['connection_status'] = 'not'
+
         return users
     
     @classmethod

@@ -2,10 +2,95 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import Booking, Review, BookingStatus
+from .models import Booking, Review, BookingStatus, BookingEquipment
 
 
-# Bulk actions for booking management
+@admin.register(BookingEquipment)
+class BookingEquipmentAdmin(admin.ModelAdmin):
+    list_display = [
+        'id_short',
+        'booking_link',
+        'equipment_link',
+        'quantity',
+        'price',
+        'created_at'
+    ]
+    list_filter = [
+        'created_at',
+        'equipment__club',
+        'equipment__equipment__name'
+    ]
+    search_fields = [
+        'booking__id',
+        'equipment__club__name',
+        'equipment__equipment__name'
+    ]
+    date_hierarchy = 'created_at'
+    autocomplete_fields = ['booking', 'equipment']
+    readonly_fields = [
+        'id',
+        'created_at',
+        'updated_at',
+        'total_price'
+    ]
+    
+    fieldsets = (
+        ('IDs', {
+            'fields': ('id',),
+            'classes': ('collapse',)
+        }),
+        ('Relations', {
+            'fields': ('booking', 'equipment')
+        }),
+        ('Item Details', {
+            'fields': ('quantity', 'price')
+        }),
+        ('Financial', {
+            'fields': ('total_price',),
+            'description': 'Auto-calculated from quantity × price'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def id_short(self, obj):
+        """Display shortened UUID"""
+        return str(obj.id)[:8]
+    id_short.short_description = 'ID'
+    
+    def booking_link(self, obj):
+        """Clickable link to booking"""
+        from django.urls import reverse
+        url = reverse('admin:appname_booking_change', args=[obj.booking.id])
+        return format_html('<a href="{}">{}</a>', url, obj.booking)
+    booking_link.short_description = 'Booking'
+    
+    def equipment_link(self, obj):
+        """Clickable link to club equipment"""
+        from django.urls import reverse
+        url = reverse('admin:appname_clubequipment_change', args=[obj.equipment.id])
+        return format_html(
+            '<a href="{}">{} - {}</a>',
+            url,
+            obj.equipment.club,
+            obj.equipment.equipment
+        )
+    equipment_link.short_description = 'Club Equipment'
+    
+
+    def total_price(self, obj):
+        """Calculate total price"""
+        return obj.quantity * obj.price
+    total_price.short_description = 'Total Price'
+    
+    def get_queryset(self, request):
+        """Optimize queries with select_related"""
+        qs = super().get_queryset(request)
+        return qs.select_related('booking', 'equipment', 'equipment__club', 'equipment__equipment')
+
+
 @admin.action(description=_('Mark selected bookings as Completed'))
 def mark_completed(modeladmin, request, queryset):
     queryset.update(status=BookingStatus.COMPLETED)

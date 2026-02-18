@@ -291,7 +291,7 @@ class SearchUsersView(APIView):
     """
 
     
-    def get(self, request):
+    def get(self, request, team_id):
         """
         Search users by username filter.
         
@@ -305,13 +305,14 @@ class SearchUsersView(APIView):
         
         # Search users using service (returns top 10)
         users = TeamInvitationService.search_users_by_username(
-            username_filter=username_filter,
+            team_id,
+            username_filter,
             limit=10
         )
         
         
         return Response(
-            {"users":users} 
+            users 
          , status=status.HTTP_200_OK)
 
 

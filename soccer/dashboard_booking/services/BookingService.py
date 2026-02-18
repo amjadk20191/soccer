@@ -41,7 +41,6 @@ class BookingService:
         booking.save(update_fields=['status', 'updated_at'])
         return booking
     
-  
     @classmethod
     def reject_booking(cls, booking):
         """Reject booking (from Pending_manager)"""

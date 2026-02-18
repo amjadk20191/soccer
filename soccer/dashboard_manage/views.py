@@ -1,4 +1,4 @@
-from rest_framework import viewsets, mixins, permissions, parsers, exceptions, status
+from rest_framework import viewsets, mixins, permissions, parsers, exceptions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.generics import get_object_or_404
@@ -6,8 +6,11 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from django.db import transaction
 
-from .models import Club, ClubPricing, Pitch
-from .serializers import ClubManagerSerializer, WeekdayPricingSerializer, DatePricingSerializer, PitchSerializer, PitchListSerializer, PitchActivationSerializer
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment
+from .serializers import (ClubManagerSerializer, WeekdayPricingSerializer,
+                        DatePricingSerializer, PitchSerializer,
+                        PitchListSerializer, PitchActivationSerializer,
+                        ReadEquipmentSerializer, CreateClubEquipmentSerializer, ShowClubEquipmentSerializer)
 
 class ClubManagerView(APIView):
 
@@ -97,11 +100,7 @@ class PitchViewSet(viewsets.ModelViewSet):
     # permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        club_id = getattr(user, 'club_id', None)
-        
-        if not club_id and self.request.auth:
-             club_id = self.request.auth.get('club_id')
+        club_id = self.request.auth.get('club_id')
 
         return Pitch.objects.filter(club_id=club_id)
 
@@ -138,3 +137,23 @@ class PitchViewSet(viewsets.ModelViewSet):
                                                     updated_at=timezone.now())
       
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
+    
+
+class EquipmentGenericsList(generics.ListAPIView):
+    serializer_class = ReadEquipmentSerializer
+    queryset = Equipment.objects.all()
+
+class ClubEquipmentGenericsList(viewsets.ModelViewSet):
+    serializer_class = ReadEquipmentSerializer
+    
+    def get_queryset(self):
+        club_id = self.request.auth.get('club_id')
+        
+        if self.action == 'retrieve' or self.action == 'list':
+            return ClubEquipment.objects.select_related('equipment').filter(club_id=club_id)
+        return ClubEquipment.objects.filter(club_id=club_id)
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve' or self.action == 'list':
+            return ShowClubEquipmentSerializer
+        return CreateClubEquipmentSerializer

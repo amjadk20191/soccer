@@ -109,3 +109,37 @@ class ReservationTypeHoure(models.Model):
         indexes = [
             models.Index(fields=['club']),
         ]
+
+
+
+
+class Equipment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    name = models.CharField(max_length=100)
+    description = models.CharField(max_length=300, blank=True)
+    image = models.ImageField(upload_to=upload_to_model_name, validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"], message="Only JPG, JPEG, PNG, and WEBP images are allowed." )])
+
+
+
+
+class ClubEquipment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, validators=[MinValueValidator(0)])
+    quantity = models.IntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["club", "equipment"],
+                name="uniq_club_equipment"
+            )
+        ]
+
+
+
+

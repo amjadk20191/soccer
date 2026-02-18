@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import  BookingNotification
-from  player_booking.models import Booking, BookingStatus, PayStatus, BookingStatus
+from  player_booking.models import Booking, BookingStatus, PayStatus
 from dashboard_manage.models import Pitch
 from dashboard_booking.services.PricingService import PricingService
 

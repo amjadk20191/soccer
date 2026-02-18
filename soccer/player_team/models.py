@@ -83,6 +83,7 @@ class TeamMember(models.Model):
             models.Index(fields=['team']),
             models.Index(fields=['player']),
             models.Index(fields=['player', 'status']),
+            models.Index(fields=['player', 'team', 'status']),
         ]
 
 
@@ -136,6 +137,7 @@ class Request(models.Model):
             models.Index(fields=['recruitment_post']),
             models.Index(fields=['team']),
             models.Index(fields=['player']),
+            models.Index(fields=['player', 'team', 'status']),
         ]
     
     def __str__(self):

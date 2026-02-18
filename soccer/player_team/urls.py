@@ -30,7 +30,7 @@ urlpatterns = [
     # Get all invitation requests for authenticated user
     path('my-invitations/', MyInvitationsView.as_view(), name='my-invitations'),
     # Search users by username filter (returns top 10)
-    path('search-users/', SearchUsersView.as_view(), name='search-users'),
+    path('search-users/<uuid:team_id>/', SearchUsersView.as_view(), name='search-users'),
     # Captain removes a player from team
     path('remove-player/<uuid:team_id>/', RemovePlayerView.as_view(), name='remove-player'),
     # Player leaves a team (removes themselves)

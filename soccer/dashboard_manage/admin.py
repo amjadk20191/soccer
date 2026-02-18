@@ -1,7 +1,9 @@
 # clubs/admin.py
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import Club, ClubPricing, Pitch, ReservationTypeHoure
+from .models import Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment, ClubEquipment
+from django.utils.html import mark_safe
+
 
 
 class ClubPricingInline(admin.TabularInline):
@@ -149,3 +151,51 @@ class ReservationTypeHoureAdmin(admin.ModelAdmin):
     autocomplete_fields = ('club',)
     ordering = ('club', 'minutes')
     list_select_related = ('club',)
+
+
+
+@admin.register(Equipment)
+class EquipmentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'description', 'image_tag']
+    list_filter = ['name']
+    search_fields = ['name', 'description']
+    readonly_fields = ['image_preview']
+
+    def image_tag(self, obj):
+        if obj.image:
+            return mark_safe(f'<img src="{obj.image.url}" width="50" height="50" style="object-fit: cover;" />')
+        return "No Image"
+    image_tag.short_description = 'Image'
+    image_tag.allow_tags = True
+    
+    def image_preview(self, obj):
+        if obj.image:
+            return f'<img src="{obj.image.url}" width="300" style="max-height: 300px; object-fit: contain;" />'
+        return "No Image"
+    image_preview.short_description = 'Image Preview'
+    image_preview.allow_tags = True
+
+
+@admin.register(ClubEquipment)
+class ClubEquipmentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'club', 'equipment', 'quantity', 'is_active', 'created_at', 'updated_at']
+    list_filter = ['is_active', 'club', 'equipment', 'created_at']
+    search_fields = ['club__name', 'equipment__name']
+    list_editable = ['quantity', 'is_active']
+    date_hierarchy = 'created_at'
+    autocomplete_fields = ['club', 'equipment']
+    
+    fieldsets = (
+        ('Association', {
+            'fields': ('club', 'equipment')
+        }),
+        ('Details', {
+            'fields': ('quantity', 'is_active')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']

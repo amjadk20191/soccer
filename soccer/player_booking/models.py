@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 from core.models import User
-from dashboard_manage.models import Pitch
+from dashboard_manage.models import Pitch, ClubEquipment
 from dashboard_manage.models import Club
 import uuid
 
@@ -38,6 +38,7 @@ class Booking(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    final_price = models.DecimalField(max_digits=10, decimal_places=2)
     deposit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=None)
     status = models.PositiveSmallIntegerField(choices=BookingStatus.choices, default=BookingStatus.PENDING_MANAGER)
     payment_status = models.PositiveSmallIntegerField(choices=PayStatus.choices, default=PayStatus.UNKNOWN, blank=True)
@@ -83,4 +84,15 @@ class Review(models.Model):
             models.Index(fields=['club']),
             models.Index(fields=['booking']),
         ]
+
+
+class BookingEquipment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
+    equipment = models.ForeignKey(ClubEquipment, on_delete=models.CASCADE, validators=[MinValueValidator(1)])
+    # name = models.CharField(max_length=100)
+    quantity = models.IntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
