@@ -102,7 +102,7 @@ class PitchViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         club_id = self.request.auth.get('club_id')
 
-        return Pitch.objects.filter(club_id=club_id)
+        return Pitch.objects.filter(club_id=club_id, is_deteted=False)
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -118,6 +118,17 @@ class PitchViewSet(viewsets.ModelViewSet):
              club_id = self.request.auth.get('club_id')
         serializer.save(club_id=club_id)
     
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        instance.is_deteted = True
+        instance.is_active = False
+        instance.save(update_fields=['is_deteted', 'is_active'])
+
+        return Response(
+            {"detail": "Club equipment soft deleted successfully."},
+            status=status.HTTP_200_OK
+        )
     @action(detail=True, methods=['patch'], url_path='set-active')
     def set_active(self, request, pk):
         serializer = PitchActivationSerializer(data=request.data)
@@ -150,10 +161,22 @@ class ClubEquipmentGenericsList(viewsets.ModelViewSet):
         club_id = self.request.auth.get('club_id')
         
         if self.action == 'retrieve' or self.action == 'list':
-            return ClubEquipment.objects.select_related('equipment').filter(club_id=club_id)
-        return ClubEquipment.objects.filter(club_id=club_id)
+            return ClubEquipment.objects.select_related('equipment').filter(club_id=club_id, is_deteted=False)
+        return ClubEquipment.objects.filter(club_id=club_id, is_deteted=False)
     
     def get_serializer_class(self):
         if self.action == 'retrieve' or self.action == 'list':
             return ShowClubEquipmentSerializer
         return CreateClubEquipmentSerializer
+    
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        instance.is_deteted = True
+        instance.is_active = False
+        instance.save(update_fields=['is_deteted', 'is_active'])
+
+        return Response(
+            {"detail": "Club equipment soft deleted successfully."},
+            status=status.HTTP_200_OK
+        )

@@ -25,7 +25,8 @@ class EquipmentManageService:
                     club_id=club_id,
                     equipment_id=equipment_id,
                     quantity=int(quantity),
-                    is_active=True
+                    is_active=True,
+                    is_deteted=False
                 )
                 return obj
 

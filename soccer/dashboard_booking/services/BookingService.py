@@ -12,7 +12,7 @@ class BookingService:
     @transaction.atomic
     def owner_update_booking_status(cls, booking_id, status, club_id):
         booking = get_object_or_404(
-            Booking.objects.select_for_update(), pk=booking_id, pitch__club_id=club_id
+            Booking.objects.select_for_update(), pk=booking_id, club_id=club_id
             )
                 
         match status:

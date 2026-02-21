@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view
 
 from django.shortcuts import get_object_or_404
 from dashboard_manage.models import Club
-from  player_booking.models import Booking, BookingStatus, PayStatus
+from  player_booking.models import Booking, BookingStatus, PayStatus, BookingEquipment
 from .serializers import (
     BookingListSerializer,
     BookingDetailSerializer,
@@ -17,13 +17,18 @@ from .serializers import (
     BookingSlotFilterSerializer,
     BookingPriceRequestSerializer,
     BookingConvertStatusSerializer,
-    BookingListPitchSerializer
+    BookingListPitchSerializer,
+    EquipmentAvailabilityQuerySerializer
 )
 
 # from .permissions import IsClubManager
 from dashboard_booking.services.BookingService import BookingService
 from dashboard_booking.services.PricingService import PricingService
 from dashboard_booking.services.ClubTimeForOwnerService import ClubTimeForOwnerService
+from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
+from django.db.models import Prefetch
+
+
 
 
 class BookingViewSet(viewsets.ModelViewSet):
@@ -35,8 +40,15 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         club_id = self.request.auth.get('club_id')
         if self.action == 'retrieve':
-            return Booking.objects.filter(pitch__club_id=club_id).select_related('pitch', 'player')
-        return Booking.objects.filter(pitch__club_id=club_id)
+            return Booking.objects.filter(club_id=club_id, pitch__is_deteted=False).select_related('pitch', 'player'
+                                        ).prefetch_related(
+                                                Prefetch(
+                                                    'bookingequipment_set',
+                                                    queryset=BookingEquipment.objects.select_related('equipment_def')
+                                                )
+                                            )
+
+        return Booking.objects.filter(club_id=club_id)
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -103,7 +115,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         bookings = Booking.objects.filter(
                     pitch_id=pitch_id,
-                    pitch__club_id=club_id,
+                    club_id=club_id,
                     date=date
                 ).select_related('player').order_by('start_time')
         
@@ -207,10 +219,12 @@ class BookingPriceAPIView(APIView):
         date = serializer.validated_data['date']
         start_time = serializer.validated_data['start_time']
         end_time = serializer.validated_data['end_time']
-        
+        equipments = serializer.validated_data.get('equipments', None)
+    
         club_id = self.request.auth.get('club_id')
 
-        
+
+        response = dict()
         # Calculate price
         try:
             price = PricingService.calculate_final_price(
@@ -220,10 +234,16 @@ class BookingPriceAPIView(APIView):
                 start_time=start_time,
                 end_time=end_time
             )
-            
-            return Response({
-                'price': price
-            }, status=status.HTTP_200_OK)
+
+            if equipments:
+                response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments)
+                response['price'] = price + response['equipments_price']
+
+            response['pitch_price'] = price
+            print(response)
+
+
+            return Response(dict(response), status=status.HTTP_200_OK)
                 
         except Exception as e:
             return Response({
@@ -252,12 +272,40 @@ class BookingstatusAPIView(APIView):
     
         
 
-@api_view(['GET'])
-def ClubOpeningPrices(request):
-    """
-    GET: for list all opening time and the price for each pitch for club for next X days
-    """
-
+class ClubOpeningPrices(APIView):
     
-    opening_time_with_pitches_prices = ClubTimeForOwnerService.get_opening_time_with_pitches_prices(request.auth.get('club_id'), 10, request)
-    return Response(opening_time_with_pitches_prices)
+    def get(self, request):
+        
+        opening_time_with_pitches_prices = ClubTimeForOwnerService.get_opening_time_with_pitches_prices(request.auth.get('club_id'), 10, request)
+        return Response(opening_time_with_pitches_prices)
+
+
+
+class EquipmentAvailabilityView(APIView):
+    
+    def get(self, request):
+        query_serializer = EquipmentAvailabilityQuerySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        
+        # Get validated data
+        validated_data = query_serializer.validated_data
+        booking_date = validated_data['date']
+        start_time = validated_data['start_time']
+        end_time = validated_data['end_time']
+        
+        club_id = self.request.auth.get('club_id')
+        try:
+            available_equipments = EquipmentBookingService.Get_equipment_quantities_for_time(
+                club_id=club_id,
+                booking_date=booking_date,
+                start_time=start_time,
+                end_time=end_time,
+                request=request
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        return Response(available_equipments, status=status.HTTP_200_OK)

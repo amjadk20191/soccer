@@ -1,12 +1,32 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import  BookingNotification
-from  player_booking.models import Booking, BookingStatus, PayStatus
+from  player_booking.models import Booking, BookingStatus, PayStatus, BookingEquipment
 from dashboard_manage.models import Pitch
 from dashboard_booking.services.PricingService import PricingService
+from .services.EquipmentBookingService import EquipmentBookingService
+from soccer.enm import BOOKING_STATUS_DENIED
+from django.db import transaction
+
 
 User = get_user_model()
 
+class EquipmentBookingSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class EquipmentAvailabilityQuerySerializer(serializers.Serializer):
+    date = serializers.DateField(required=True)
+    start_time = serializers.TimeField(required=True)
+    end_time = serializers.TimeField(required=True)
+    
+    def validate(self, data):
+        if data['start_time'] >= data['end_time']:
+            raise serializers.ValidationError({
+                "time": "start_time must be before end_time"
+            })
+        return data
 
 class BookingListSerializer(serializers.ModelSerializer):    
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -17,21 +37,32 @@ class BookingListSerializer(serializers.ModelSerializer):
             'id', 'start_time', 'end_time', 'price', 'status_display', 'player_name'
         ]
 
+
+
+class BookingEquipmentDetailSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source='equipment_def.name', read_only=True)
+    image = serializers.ImageField(source='equipment_def.image', read_only=True)
+    
+    class Meta:
+        model = BookingEquipment
+        fields = ['id', 'name', 'image', 'quantity', 'price']
+
+
 class BookingDetailSerializer(serializers.ModelSerializer):
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     full_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     pitch_name = serializers.CharField(source='pitch.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payment_status = serializers.CharField(source='get_payment_status_display', read_only=True)
+    equipments = BookingEquipmentDetailSerializer(source='bookingequipment_set', many=True, read_only=True)  
 
     class Meta:
         model = Booking
         fields = [
             'id', 'date', 'start_time', 'end_time', 'price', 'status_display',
             'created_at', 'updated_at', 'player_name', 'full_name', 'pitch_name', 'phone', 'by_owner',
-            'payment_status','note_owner'
+            'payment_status','note_owner', 'equipments'
         ]
-
 
 class BookingListPitchSerializer(serializers.ModelSerializer):
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
@@ -47,12 +78,19 @@ class BookingListPitchSerializer(serializers.ModelSerializer):
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    equipments = EquipmentBookingSerializer(many=True, required=False)
     
     class Meta:
         model = Booking
-        fields = ['pitch', 'date', 'start_time', 'end_time', 'username', 'phone', 'note_owner', 'payment_status', 'status', 'deposit', 'price']
+        fields = ['pitch', 'date', 'start_time', 'end_time', 'username', 'phone', 'note_owner', 'payment_status', 'status', 'deposit', 'price', 'final_price', 'equipments']
         extra_kwargs = {
             'price': {
+                'read_only':True
+                # 'required': True,
+                # 'allow_null': False,
+                # 'allow_blank': False
+            },
+            'final_price': {
                 'read_only':True
                 # 'required': True,
                 # 'allow_null': False,
@@ -112,11 +150,12 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         overlapping = Booking.objects.filter(
             pitch=pitch,
             date=date,
-            status__in=[
-                BookingStatus.PENDING_PAY.value,
-                BookingStatus.COMPLETED.value,
-                BookingStatus.PENDING_PLAYER.value
-            ]
+            status__in=BOOKING_STATUS_DENIED
+            # [
+            #     BookingStatus.PENDING_PAY.value,
+            #     BookingStatus.COMPLETED.value,
+            #     BookingStatus.PENDING_PLAYER.value
+            # ]
         ).filter(
             start_time__lt=end_time,
             end_time__gt=start_time
@@ -131,7 +170,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         username = validated_data.pop('username', None)
         user = self.is_valid_username(username) if username else None
         club_id = self.context['request'].auth.get('club_id')
-        price=PricingService.calculate_final_price(validated_data['pitch'], club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
+        price = PricingService.calculate_final_price(validated_data['pitch'], club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
         
         if validated_data['status'] == BookingStatus.COMPLETED.value:
             validated_data['payment_status'] = PayStatus.UNKNOWN.value
@@ -140,12 +179,18 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         # delete deposit if payment_status what not deposit 
         if validated_data.get('payment_status', PayStatus.DEPOSIT.value) != PayStatus.DEPOSIT.value:
             validated_data.pop('deposit', None)
-        
-        booking = Booking.objects.create(
-            player=user,
-            price=price,
-            by_owner=True,
-            **validated_data)
+        equipments = validated_data.pop("equipments",[])
+    
+        with transaction.atomic():
+            booking = Booking.objects.create(
+                club_id=club_id,
+                player=user,
+                price=price,
+                by_owner=True,
+                final_price=price,
+                **validated_data)
+            if equipments:
+                equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments)
         
         return booking
 
@@ -189,10 +234,11 @@ class BookingSlotFilterSerializer(serializers.Serializer):
 
 
 class BookingPriceRequestSerializer(serializers.ModelSerializer):
-    
+    equipments = EquipmentBookingSerializer(many=True, required=False)
+
     class Meta:
         model = Booking
-        fields = ['pitch', 'date', 'start_time', 'end_time']
+        fields = ['pitch', 'date', 'start_time', 'end_time', 'equipments']
     
     def validate(self, attrs):
         if attrs['start_time'] >= attrs['end_time']:

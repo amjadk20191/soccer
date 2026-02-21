@@ -3,7 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import RegexValidator
 from core.models import User
-from dashboard_manage.models import Pitch, ClubEquipment
+from dashboard_manage.models import Pitch, ClubEquipment, Equipment
 from dashboard_manage.models import Club
 import uuid
 
@@ -33,6 +33,7 @@ class PayStatus(models.IntegerChoices):
 class Booking(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     pitch = models.ForeignKey(Pitch, on_delete=models.CASCADE)
+    club = models.ForeignKey(Club, on_delete=models.SET_NULL, null=True)
     player = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     date = models.DateField()
     start_time = models.TimeField()
@@ -89,9 +90,10 @@ class Review(models.Model):
 class BookingEquipment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
-    equipment = models.ForeignKey(ClubEquipment, on_delete=models.CASCADE, validators=[MinValueValidator(1)])
+    equipment = models.ForeignKey(ClubEquipment, on_delete=models.CASCADE)
+    equipment_def = models.ForeignKey(Equipment, on_delete=models.CASCADE)
     # name = models.CharField(max_length=100)
-    quantity = models.IntegerField()
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
     price = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

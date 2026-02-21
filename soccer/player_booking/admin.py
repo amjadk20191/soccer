@@ -9,8 +9,6 @@ from .models import Booking, Review, BookingStatus, BookingEquipment
 class BookingEquipmentAdmin(admin.ModelAdmin):
     list_display = [
         'id_short',
-        'booking_link',
-        'equipment_link',
         'quantity',
         'price',
         'created_at'
@@ -40,7 +38,7 @@ class BookingEquipmentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Relations', {
-            'fields': ('booking', 'equipment')
+            'fields': ('booking', 'equipment', 'equipment_def')
         }),
         ('Item Details', {
             'fields': ('quantity', 'price')
@@ -60,24 +58,7 @@ class BookingEquipmentAdmin(admin.ModelAdmin):
         return str(obj.id)[:8]
     id_short.short_description = 'ID'
     
-    def booking_link(self, obj):
-        """Clickable link to booking"""
-        from django.urls import reverse
-        url = reverse('admin:appname_booking_change', args=[obj.booking.id])
-        return format_html('<a href="{}">{}</a>', url, obj.booking)
-    booking_link.short_description = 'Booking'
     
-    def equipment_link(self, obj):
-        """Clickable link to club equipment"""
-        from django.urls import reverse
-        url = reverse('admin:appname_clubequipment_change', args=[obj.equipment.id])
-        return format_html(
-            '<a href="{}">{} - {}</a>',
-            url,
-            obj.equipment.club,
-            obj.equipment.equipment
-        )
-    equipment_link.short_description = 'Club Equipment'
     
 
     def total_price(self, obj):
@@ -133,8 +114,8 @@ class BookingAdmin(admin.ModelAdmin):
     booking_duration.short_description = _('Time Slot')
     
     list_display = (
-        'id', 'pitch', 'player', 'phone', 'date', 'booking_duration',
-        'price', 'status_badge', 'created_at', 'status',
+        'id','club' , 'pitch', 'player', 'phone', 'date', 'booking_duration',
+        'price', 'final_price', 'status_badge', 'created_at', 'status',
         'payment_status', 'deposit', 'note_owner', 'by_owner',
     )
     list_filter = (
@@ -155,8 +136,8 @@ class BookingAdmin(admin.ModelAdmin):
     fieldsets = (
         (_('Booking Details'), {
             'fields': (
-                'pitch', 'player', 'phone', 'date',
-                'start_time', 'end_time', 'price', 'status',
+                'club', 'pitch', 'player', 'phone', 'date',
+                'start_time', 'end_time', 'price', 'final_price', 'status',
                 'payment_status', 'deposit', 'note_owner', 'by_owner',
             )
         }),

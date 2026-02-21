@@ -35,7 +35,7 @@ class ClubTimeForOwnerService:
             - pitches: List of pitch dictionaries with adjusted prices
         """
         # Fetch all pitches for this club (ordered by type, then name)
-        pitches = Pitch.objects.filter(club_id=club_id).values('id', 'name', 'price_first',
+        pitches = Pitch.objects.filter(club_id=club_id, is_deteted=False).values('id', 'name', 'price_first',
                                                                 'price_second', 'time_interval', 'type',
                                                                 'size_high', 'size_width', 'image','is_active'
                                                                 ).order_by('type', 'name')  

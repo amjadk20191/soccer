@@ -83,6 +83,7 @@ class Pitch(models.Model):
     size_high = models.DecimalField(max_digits=5, decimal_places=2)
     size_width = models.DecimalField(max_digits=5, decimal_places=2)
     is_active = models.BooleanField(default=True)
+    is_deteted = models.BooleanField(default=False)
     price_first = models.DecimalField(max_digits=10, decimal_places=2)
     price_second = models.DecimalField(max_digits=10, decimal_places=2)
     time_interval = models.TimeField()
@@ -125,10 +126,11 @@ class Equipment(models.Model):
 class ClubEquipment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
-    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE, validators=[MinValueValidator(0)])
-    quantity = models.IntegerField()
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
+    quantity = models.PositiveSmallIntegerField(validators=[MinValueValidator(0)])
     price = models.DecimalField(max_digits=10, decimal_places=2)
     is_active = models.BooleanField(default=True)
+    is_deteted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

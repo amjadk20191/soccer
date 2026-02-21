@@ -35,6 +35,7 @@ class ClubAdmin(admin.ModelAdmin):
     """Admin configuration for Club model"""
     
     list_display = (
+          'id',
         'name', 'manager', 'address', 'open_time', 'close_time',
         'rating_avg', 'rating_count', 'is_active', 'flexible_reservation', 'created_at', 'is_active'
     )
@@ -108,6 +109,7 @@ class PitchAdmin(admin.ModelAdmin):
     """Admin configuration for Pitch model"""
     
     list_display = (
+        'id',
         'name', 'club', 'type', 'size_width', 'size_high', 'is_active',
         'price_first', 'price_second', 'created_at'
     )
@@ -125,7 +127,7 @@ class PitchAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('club', 'name', 'type', 'size_width', 'size_high', 'image')
+            'fields': ('id', 'club', 'name', 'type', 'size_width', 'size_high', 'image')
         }),
         (_('Pricing & Timing'), {
             'fields': ('price_first', 'price_second', 'time_interval')
@@ -178,7 +180,7 @@ class EquipmentAdmin(admin.ModelAdmin):
 
 @admin.register(ClubEquipment)
 class ClubEquipmentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'club', 'equipment', 'quantity', 'is_active', 'created_at', 'updated_at']
+    list_display = ['id', 'club', 'equipment', 'price', 'quantity', 'is_active', 'created_at', 'updated_at']
     list_filter = ['is_active', 'club', 'equipment', 'created_at']
     search_fields = ['club__name', 'equipment__name']
     list_editable = ['quantity', 'is_active']
@@ -190,7 +192,7 @@ class ClubEquipmentAdmin(admin.ModelAdmin):
             'fields': ('club', 'equipment')
         }),
         ('Details', {
-            'fields': ('quantity', 'is_active')
+            'fields': ('price', 'quantity', 'is_active')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
