@@ -488,8 +488,6 @@ class DeleteTeamView(APIView):
 
 class DeleteSendInviteView(APIView):
 
-
-    
     def delete(self, request, team_id, invite_id):
 
         # Get user ID from JWT token (fast access)
