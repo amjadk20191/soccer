@@ -12,7 +12,9 @@ from .views import (
     CreateTeamView,
     UpdateTeamView,
     DeleteTeamView,
-    TeamImageListAPIView
+    TeamImageListAPIView,
+    teamSendInvitationsView,
+    DeleteSendInviteView
 )
 
 router = DefaultRouter()
@@ -33,6 +35,8 @@ urlpatterns = [
     path('search-users/<uuid:team_id>/', SearchUsersView.as_view(), name='search-users'),
     # Captain removes a player from team
     path('remove-player/<uuid:team_id>/', RemovePlayerView.as_view(), name='remove-player'),
+    path('team-send-invitations/<uuid:team_id>/', teamSendInvitationsView.as_view(), name='team-send-invitations'),
+    path('delete-send-invite/<uuid:team_id>/<uuid:invite_id>/', DeleteSendInviteView.as_view(), name='delete-send-invite'),
     # Player leaves a team (removes themselves)
     path('leave-team/<uuid:team_id>/', LeaveTeamView.as_view(), name='leave-team'),
     # Create a new team

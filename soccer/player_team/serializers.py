@@ -155,12 +155,12 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
     Serializer for invitation request details.
     Includes recruitment post data when available (is_open=True, post_type=2).
     """
-    team_id = serializers.UUIDField(source='team.id', read_only=True)
+    # team_id = serializers.UUIDField(source='team.id', read_only=True)
     team_name = serializers.CharField(source='team.name', read_only=True)
     team_logo = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    recruitment_post_type = serializers.SerializerMethodField()
-    recruitment_post_description = serializers.SerializerMethodField()
+    recruitment_post_type = serializers.CharField(source='recruitment_post.get_type_display', read_only=True, allow_null=True)
+    recruitment_post_description = serializers.CharField(source='recruitment_post.description', read_only=True, allow_null=True)
     
     class Meta:
         model = Request
@@ -172,29 +172,50 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
             'status_display',
             'recruitment_post_type',
             'recruitment_post_description',
+            'recruitment_post_id',
             'created_at'
         ]
         read_only_fields = ['id', 'status', 'created_at']
     
     def get_team_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
-        if obj.team and obj.team.logo:
+        if obj.team and obj.team.logo and obj.team.logo.logo:
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.team.logo.url)
-            return obj.team.logo.url
+                return request.build_absolute_uri(obj.team.logo.logo.url)
+            return obj.team.logo.logo.url
         return None
     
-    def get_recruitment_post_type(self, obj):
-        """Get recruitment post type if available and conditions are met"""
-        if obj.recruitment_post and obj.recruitment_post.is_open and obj.recruitment_post.post_type == 2:
-            return obj.recruitment_post.type
-        return None
+class ShowTeamInvitationSendSerializer(serializers.ModelSerializer):
+    player_username = serializers.CharField(source='player.username', read_only=True)
+    player_full_name = serializers.CharField(source='player.full_name', read_only=True)
+    # team_logo = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    recruitment_post_type = serializers.CharField(source='recruitment_post.get_type_display', read_only=True, allow_null=True)
+    recruitment_post_description = serializers.CharField(source='recruitment_post.description', read_only=True, allow_null=True)
     
-    def get_recruitment_post_description(self, obj):
-        """Get recruitment post description if available and conditions are met"""
-        if obj.recruitment_post and obj.recruitment_post.is_open and obj.recruitment_post.post_type == 2:
-            return obj.recruitment_post.description
+    class Meta:
+        model = Request
+        fields = [
+            'id',
+            'player_id',
+            'status_display',
+            'created_at',
+            'recruitment_post_id',
+            'player_username',
+            'player_full_name',
+            'recruitment_post_type',
+            'recruitment_post_description'
+        ]
+        read_only_fields = ['id', 'status', 'created_at']
+    
+    def get_team_logo(self, obj):
+        """Get team logo URL, building absolute URL if request context is available"""
+        if obj.team and obj.team.logo and obj.team.logo.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.team.logo.logo.url)
+            return obj.team.logo.logo.url
         return None
 
 
@@ -298,3 +319,6 @@ class TeamResponseSerializer(serializers.ModelSerializer):
         return None
 
 
+class DeleteSendInviteSerializer(serializers.Serializer):
+    team_id = serializers.UUIDField()
+    invite_id = serializers.UUIDField()

@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied, NotFoun
 from core.models import User
 from ..models import Team, TeamMember, Request, MemberStatus
 from django.db.models import Q
-from django.db.models import Case, When, Value, CharField, Exists, OuterRef
+
 
 class RequestStatus:
     """Request status constants"""
@@ -193,7 +193,7 @@ class TeamInvitationService:
                     team__is_active=True 
                 ).count()
         
-                if existing_team > settings.MAX_TEAMS:
+                if existing_team >= settings.MAX_TEAMS:
                     raise ValidationError(detail="You are already in 5 active team.")
                         # Create team membership
                 team_member = TeamMember.objects.create(
@@ -217,6 +217,7 @@ class TeamInvitationService:
     
     @classmethod
     def get_user_invitations(cls, player_id):
+
         """
         Get all invitation requests for the authenticated user.
         
@@ -240,18 +241,38 @@ class TeamInvitationService:
             status=1 # pending
         ).filter(
             Q(recruitment_post__isnull=True) | 
-            Q(recruitment_post__is_open=True, recruitment_post__post_type=2)
+            Q(recruitment_post__is_open=True, recruitment_post__post_type=1)
         ).select_related('team', 'recruitment_post').only(
             'id',
             'team_id',
+            'status',
+            'created_at',
+            'recruitment_post_id',
+            'team__name',
+            'team__logo',
+            'recruitment_post__type',
+            'recruitment_post__description'
+        ).order_by('-created_at')
+        
+        return invitations
+    
+    @classmethod
+    def get_invitations_send_by_team(cls, team_id):
+
+        invitations = Request.objects.filter(
+            team_id=team_id,
+            status=1 # pending
+        ).filter(
+            Q(recruitment_post__isnull=True) | 
+            Q(recruitment_post__is_open=True, recruitment_post__post_type=1)
+        ).select_related('player', 'recruitment_post').only(
+            'id',
             'player_id',
             'status',
             'created_at',
             'recruitment_post_id',
-            'team__id',
-            'team__name',
-            'team__logo',
-            'team__is_active',
+            'player__username',
+            'player__full_name',
             'recruitment_post__type',
             'recruitment_post__description'
         ).order_by('-created_at')
@@ -385,3 +406,48 @@ class TeamInvitationService:
         
         return team_member
 
+
+    @classmethod
+    def delete_invite(cls, captain_id, team_id, invite_id):
+        """
+        Cancel/delete an invitation.
+
+        Args:
+            captain_id: UUID of captain (caller)
+            team_id: UUID of the team owning the invite
+            invite_id: UUID of the Request (invite) to cancel
+
+        Returns:
+            The modified Request instance (if status updated) or None (if deleted).
+
+        Raises:
+            NotFound, PermissionDenied, ValidationError
+        """
+        # 1) verify team exists and is active, and captain matches
+        team = Team.objects.only('id', 'captain_id', 'is_active').filter(
+            id=team_id,
+            captain_id=captain_id
+        ).first()
+
+        if not team:
+            raise PermissionDenied(detail="Only the team captain can cancel invites.")
+
+
+        # 2) find the invite (must be an invite, not a recruitment post request)
+        req = Request.objects.filter(
+            id=invite_id,
+            team_id=team_id).filter(
+             Q(recruitment_post__isnull=True) | 
+            Q(recruitment_post__is_open=True, recruitment_post__post_type=1)
+                            ).first()
+
+        if not req:
+            raise NotFound(detail="Invite not found for this team.")
+
+        # 3) only allow cancelling pending invites
+        if req.status != RequestStatus.PENDING:
+            raise ValidationError(detail="Only pending invites can be cancelled.")
+
+        req.delete()
+
+        return True

@@ -10,7 +10,7 @@ class CreateClubEquipmentSerializer(serializers.ModelSerializer):
     equipment_id = serializers.UUIDField()
     class Meta:
         model = ClubEquipment
-        fields = ['equipment_id', 'quantity','price' ,'is_active']
+        fields = ['equipment_id', 'quantity', 'price', 'is_active']
         extra_kwargs = {
             'is_active': {
                 'required': False,
@@ -19,7 +19,7 @@ class CreateClubEquipmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         
         club_id = self.context['request'].auth.get('club_id')
-        equipment = EquipmentManageService.create_equipment(validated_data['equipment_id'], club_id, validated_data['quantity'])
+        equipment = EquipmentManageService.create_equipment(validated_data['equipment_id'], club_id, validated_data['quantity'], validated_data['price'])
         return equipment
 
 

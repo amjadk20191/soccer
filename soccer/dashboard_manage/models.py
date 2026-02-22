@@ -138,6 +138,7 @@ class ClubEquipment(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["club", "equipment"],
+                condition=models.Q(is_deteted=False),
                 name="uniq_club_equipment"
             )
         ]

@@ -18,7 +18,9 @@ from .serializers import (
     TeamCreateSerializer,
     TeamUpdateSerializer,
     TeamResponseSerializer,
-    TeamImageerializer
+    TeamImageerializer,
+    ShowTeamInvitationSendSerializer,
+    DeleteSendInviteSerializer
 )
 from player_team.services import TeamInvitationService, TeamService
 
@@ -283,6 +285,15 @@ class MyInvitationsView(APIView):
              status=status.HTTP_200_OK)
 
 
+class teamSendInvitationsView(APIView):
+
+    def get(self, request, team_id):
+        invitations = TeamInvitationService.get_invitations_send_by_team(team_id=team_id)
+        serializer = ShowTeamInvitationSendSerializer(invitations, many=True, context={'request': request})
+        
+        return Response(serializer.data,
+             status=status.HTTP_200_OK)
+
 class SearchUsersView(APIView):
     """
     API endpoint to search users by username filter.
@@ -444,49 +455,6 @@ class UpdateTeamView(generics.UpdateAPIView):
     def get_queryset(self):
         return Team.objects.filter(captain=self.request.user, is_active=True)
 
-class _UpdateTeamView(APIView):
-    """
-    API endpoint for captain to update team information.
-    
-    Only the team captain can update team information.
-    Supports partial updates (PATCH).
-    """
-    
-    def patch(self, request, team_id):
-        """
-        Update team information.
-        
-        Args:
-            team_id: UUID of the team
-            
-        Body (all fields optional):
-            {
-                "name": "New Team Name",
-                "logo": <image file>,
-                "time": "New time",
-                "address": "New address",
-                "challenge_mode": true/false
-            }
-        """
-        # Get user ID from JWT token (fast access)
-        captain_id = request.user.id
-        
-        # Validate input
-        serializer = TeamUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        # Update team using service
-        TeamService.update_team(
-            captain_id=captain_id,
-            team_id=team_id,
-            **serializer.validated_data
-        )
-        
-        # Serialize response
-        
-        return Response({
-            'message': 'Team updated successfully',
-        }, status=status.HTTP_200_OK)
 
 class DeleteTeamView(APIView):
     """
@@ -516,5 +484,26 @@ class DeleteTeamView(APIView):
         return Response({
             'message': 'Team deactivated successfully',
             'team_id': str(team.id)
+        }, status=status.HTTP_200_OK)
+
+class DeleteSendInviteView(APIView):
+
+
+    
+    def delete(self, request, team_id, invite_id):
+
+        # Get user ID from JWT token (fast access)
+        captain_id = request.user.id
+        serializer = DeleteSendInviteSerializer(
+          data={  
+                "team_id": team_id,
+                "invite_id": invite_id
+            }
+        )
+        serializer.is_valid(raise_exception=True)
+        TeamInvitationService.delete_invite(captain_id, team_id, invite_id)
+        
+        return Response({
+            'message': 'Invite deleted successfully',
         }, status=status.HTTP_200_OK)
 

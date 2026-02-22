@@ -7,7 +7,7 @@ class EquipmentManageService:
 
     
     @classmethod
-    def create_equipment(cls, equipment_id, club_id, quantity):
+    def create_equipment(cls, equipment_id, club_id, quantity, price):
         if quantity is None or int(quantity) < 0:
             raise ValidationError({"quantity": "Quantity must be >= 0"})
 
@@ -20,15 +20,24 @@ class EquipmentManageService:
             raise ValidationError({"equipment_id": "Equipment not found"})
 
         try:
-            with transaction.atomic():
-                obj = ClubEquipment.objects.create(
-                    club_id=club_id,
-                    equipment_id=equipment_id,
-                    quantity=int(quantity),
-                    is_active=True,
-                    is_deteted=False
-                )
-                return obj
+            exists = ClubEquipment.objects.filter(
+                club_id=club_id,
+                equipment_id=equipment_id,
+                is_deteted=False
+            ).exists()
+
+            if exists:
+                raise ValidationError({
+                    "detail": "This equipment already exists for this club."
+                })
+            return ClubEquipment.objects.create(
+                club_id=club_id,
+                equipment_id=equipment_id,
+                quantity=int(quantity),
+                price=price,
+                is_active=True,
+                is_deteted=False
+            )
 
         except IntegrityError:
             raise ValidationError({

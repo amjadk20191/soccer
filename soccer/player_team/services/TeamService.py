@@ -43,7 +43,7 @@ class TeamService:
             team__is_active=True 
         ).count()
         
-        if existing_team > settings.MAX_TEAMS:
+        if existing_team >= settings.MAX_TEAMS:
             raise ValidationError(detail={"error":"You are already in 5 active team."})
         
         # Create team and team member in a transaction
@@ -67,89 +67,7 @@ class TeamService:
         
         return team, team_member
     
-    @classmethod
-    def update_team(cls, captain_id, team_id, **update_data):
-        """
-        Update team information.
-        
-        Only the team captain can update team information.
-        
-        Args:
-            captain_id: UUID of the captain (from JWT token)
-            team_id: UUID of the team
-            **update_data: Dictionary of fields to update (logo, name, time, address, challenge_mode)
-            
-        Returns:
-            Team object with updated data
-            
-        Raises:
-            ValidationError: If validation fails
-            PermissionDenied: If user is not captain
-            NotFound: If team not found
-        """
-        # Get team with optimized query
-        team = Team.objects.only(
-            'id',
-            'captain_id',
-            'is_active',
-            'name',
-            'logo',
-            'time',
-            'address',
-            'challenge_mode'
-        ).filter(
-            id=team_id,
-            is_active=True
-        ).first()
-        
-        if not team:
-            raise NotFound(detail="Team not found or is inactive.")
-        
-        # Verify user is the captain
-        if team.captain_id != captain_id:
-            raise PermissionDenied(detail="Only the team captain can update team information.")
-        
-        # Validate and prepare update fields
-        update_fields = []
-        
-        if 'name' in update_data:
-            name = update_data['name']
-            if name is not None:
-                if not name.strip():
-                    raise ValidationError(detail="Team name cannot be empty.")
-                team.name = name.strip()
-                update_fields.append('name')
-        
-        if 'logo' in update_data and update_data['logo'] is not None:
-            team.logo = update_data['logo']
-            update_fields.append('logo')
-        
-        if 'time' in update_data:
-            time = update_data['time']
-            if time is not None:
-                team.time = time.strip() if time else ''
-                update_fields.append('time')
-        
-        if 'address' in update_data:
-            address = update_data['address']
-            if address is not None:
-                team.address = address.strip() if address else ''
-                update_fields.append('address')
-        
-        if 'challenge_mode' in update_data:
-            challenge_mode = update_data['challenge_mode']
-            if challenge_mode is not None:
-                team.challenge_mode = challenge_mode
-                update_fields.append('challenge_mode')
-        
-        # Update team if there are fields to update
-        if update_fields:
-            update_fields.append('updated_at')  # Always update timestamp
-            with transaction.atomic():
-                team.save(update_fields=update_fields)
-        
-        return team
-    
+  
     @classmethod
     def deactivate_team(cls, captain_id, team_id):
         """
