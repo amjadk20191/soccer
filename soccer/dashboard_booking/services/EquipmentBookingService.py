@@ -8,12 +8,14 @@ from django.core.files.storage import default_storage
 from soccer.enm import BOOKING_STATUS_DENIED
 from django.db.models import F
 from django.conf import settings
+from django.db import transaction
 
 
 class EquipmentBookingService:
 
 
     @classmethod
+    @transaction.atomic
     def Create_Equipment_Booking(cls, club_id, booking:Booking, equipments):
         
         final_price = booking.price
@@ -48,7 +50,7 @@ class EquipmentBookingService:
             BookingEquipment_list.append(BookingEquipment(
                 booking_id=booking.id,
                 equipment_id=equipment['id'],
-                equipment_def=equipment['equipment_id'],
+                equipment_def_id=equipment['equipment_id'],
                 quantity= new_booked_map.get(equipment['id'],0),
                 price= final_equipment_price
             ))
@@ -58,7 +60,9 @@ class EquipmentBookingService:
         equipments=BookingEquipment.objects.bulk_create(BookingEquipment_list)
 
         booking.final_price=final_price
-        booking.save(update_fields=['final_price'])
+        booking._force_signals_update = booking.status==BookingStatus.COMPLETED
+        booking.save(update_fields=['final_price', 'updated_at'])
+
         return equipments
     
     @classmethod

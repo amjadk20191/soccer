@@ -47,7 +47,7 @@ class Booking(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     note_owner = models.TextField(blank=True)
     note_admin = models.TextField(blank=True)
-    by_owner = models.BooleanField(default=False)
+    by_owner = models.BooleanField(default=False)# if False the booking done by player
     phone_validator = RegexValidator(regex=r'^09\d{8}$', message=_('Phone number must start with "09" and contain exactly 10 digits (e.g., 0912345678).'))
     phone = models.CharField(validators=[phone_validator], max_length=10, null=True, blank=True, default=None)
     

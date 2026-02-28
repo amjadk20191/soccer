@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator, FileExtensionValidator
 from django.utils.translation import gettext_lazy as _
@@ -146,3 +147,63 @@ class ClubEquipment(models.Model):
 
 
 
+class BookingPriceStatistics(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    day = models.DateField()
+    money_from_completed_owner = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    money_from_completed_player = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    money_from_pending_pay_player = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    money_from_pending_pay_owner = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+
+    
+    class Meta:
+        unique_together = ("club", "day")
+
+class BookingNumStatistics(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    day = models.DateField()
+    
+    completed_num = models.PositiveSmallIntegerField(default=0)
+    completed_num_owner = models.PositiveSmallIntegerField(default=0)
+    canceled_num_from_completed_owner = models.PositiveSmallIntegerField(default=0)
+    canceled_num_from_pending_pay_owner = models.PositiveSmallIntegerField(default=0)
+    canceled_num_from_pending_pay_player = models.PositiveSmallIntegerField(default=0)
+    canceled_num_from_completed_player = models.PositiveSmallIntegerField(default=0)
+    reject_num = models.PositiveSmallIntegerField(default=0)
+    pending_pay_num = models.PositiveSmallIntegerField(default=0)
+    pending_pay_num_owner = models.PositiveSmallIntegerField(default=0)
+    pending_player_num = models.PositiveSmallIntegerField(default=0)
+    no_Show_num = models.PositiveSmallIntegerField(default=0)
+    disputed_num = models.PositiveSmallIntegerField(default=0)
+    expired_num = models.PositiveSmallIntegerField(default=0)
+
+  
+    class Meta:
+        unique_together = ("club", "day")
+
+class ClubHourlyStatistics(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    pitch = models.ForeignKey(Pitch, on_delete=models.CASCADE)
+    date = models.DateField()
+    hour = models.SmallIntegerField()  # 0 to 23
+    booked_minutes = models.IntegerField(default=0) # should be at max 60 
+
+    class Meta:
+        unique_together = ("club", "pitch", "date", "hour") 
+
+
+class ClubEquipmentStatistics(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    club_equipment = models.ForeignKey(ClubEquipment, on_delete=models.CASCADE)
+    date = models.DateField()
+    quantity_by_ower = models.PositiveSmallIntegerField(default=0) # for booking done by owner
+    revenue_by_owner = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))# for booking done by owner
+    quantity_by_player = models.PositiveSmallIntegerField(default=0)# for booking done by player
+    revenue_by_player = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))# for booking done by player
+
+    class Meta:
+        unique_together = ("club", "club_equipment", "date") 

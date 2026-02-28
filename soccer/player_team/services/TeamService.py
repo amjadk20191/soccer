@@ -106,6 +106,7 @@ class TeamService:
         with transaction.atomic():
             team.is_active = False
             team.save(update_fields=['is_active', 'updated_at'])
+            TeamMember.objects.filter(team_id=team_id).update(status=MemberStatus.OUT)
         
         return team
 

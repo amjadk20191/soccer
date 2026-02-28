@@ -7,3 +7,6 @@ class DashboardManageConfig(AppConfig):
     
     def ready(self):
         import dashboard_manage.signals.signals_rating 
+        import dashboard_manage.signals.signals_booking_statistics 
+        import dashboard_manage.signals.signals_booking_equipment_statistics
+        import dashboard_manage.signals.signals_booking_equipment_statistics_fromBooking

@@ -1,10 +1,162 @@
 # clubs/admin.py
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment, ClubEquipment
+from .models import (Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment, 
+    ClubEquipment,
+    BookingPriceStatistics,
+    BookingNumStatistics,
+    ClubHourlyStatistics,
+    ClubEquipmentStatistics,
+)
 from django.utils.html import mark_safe
 
+# ────────────────────────────────────────────────────────
+# 1. Booking Price Statistics
+# ────────────────────────────────────────────────────────
 
+@admin.register(BookingPriceStatistics)
+class BookingPriceStatisticsAdmin(admin.ModelAdmin):
+    list_display = (
+        'club', 'day', 
+        'total_completed', 'total_pending', 
+
+    )
+    list_filter = ('day', 'club')
+    search_fields = ('club__name',)
+    date_hierarchy = 'day'
+    ordering = ('-day',)
+
+    # Make all fields read-only to prevent manual editing (Data is driven by signals)
+    readonly_fields = [f.name for f in BookingPriceStatistics._meta.fields if f.name != 'id']
+
+    def total_completed(self, obj):
+        return obj.money_from_completed_owner + obj.money_from_completed_player
+    total_completed.short_description = "Total Completed"
+
+    def total_pending(self, obj):
+        return obj.money_from_pending_pay_owner + obj.money_from_pending_pay_player
+    total_pending.short_description = "Total Pending"
+
+    # Performance optimization
+    list_select_related = ('club',)
+
+# ────────────────────────────────────────────────────────
+# 2. Booking Number Statistics
+# ────────────────────────────────────────────────────────
+
+@admin.register(BookingNumStatistics)
+class BookingNumStatisticsAdmin(admin.ModelAdmin):
+    list_display = (
+        'club', 'day', 
+        'completed_num', 'pending_player_num', 'pending_pay_num', 
+        'reject_num', 'no_Show_num', 'canceled_total'
+    )
+    list_filter = ('day', 'club')
+    search_fields = ('club__name',)
+    date_hierarchy = 'day'
+    ordering = ('-day',)
+
+    readonly_fields = [f.name for f in BookingNumStatistics._meta.fields if f.name != 'id']
+
+    def canceled_total(self, obj):
+        return (
+            obj.canceled_num_from_completed_owner + 
+            obj.canceled_num_from_completed_player + 
+            obj.canceled_num_from_pending_pay_owner + 
+            obj.canceled_num_from_pending_pay_player
+        )
+    canceled_total.short_description = "Total Canceled"
+
+    # Group fields logically in the detail view
+    fieldsets = (
+        (None, {
+            'fields': ('club', 'day')
+        }),
+        ('Completed & Pending', {
+            'fields': (
+                'completed_num', 'completed_num_owner', 
+                'pending_player_num', 
+                'pending_pay_num', 'pending_pay_num_owner'
+            )
+        }),
+        ('Negative Outcomes', {
+            'fields': (
+                'reject_num', 'no_Show_num', 'disputed_num', 'expired_num'
+            )
+        }),
+        ('Cancellation Details', {
+            'fields': (
+                'canceled_num_from_completed_owner', 'canceled_num_from_completed_player',
+                'canceled_num_from_pending_pay_owner', 'canceled_num_from_pending_pay_player'
+            )
+        }),
+    )
+
+    list_select_related = ('club',)
+
+# ────────────────────────────────────────────────────────
+# 3. Club Hourly Statistics (Heatmap Data)
+# ────────────────────────────────────────────────────────
+
+@admin.register(ClubHourlyStatistics)
+class ClubHourlyStatisticsAdmin(admin.ModelAdmin):
+    list_display = ('club', 'pitch', 'date', 'hour', 'booked_minutes', 'utilization_percent')
+    list_filter = ('date', 'hour', 'club', 'pitch')
+    search_fields = ('club__name', 'pitch__name')
+    date_hierarchy = 'date'
+    ordering = ('-date', '-hour')
+
+    readonly_fields = [f.name for f in ClubHourlyStatistics._meta.fields if f.name != 'id']
+
+    def utilization_percent(self, obj):
+        # Assuming standard hour is 60 mins max
+        if obj.booked_minutes > 0:
+            return f"{(obj.booked_minutes / 60) * 100:.1f}%"
+        return "0%"
+    utilization_percent.short_description = "Utilization"
+
+    list_select_related = ('club', 'pitch')
+
+# ────────────────────────────────────────────────────────
+# 4. Club Equipment Statistics
+# ────────────────────────────────────────────────────────
+
+@admin.register(ClubEquipmentStatistics)
+class ClubEquipmentStatisticsAdmin(admin.ModelAdmin):
+    list_display = (
+        'club', 'club_equipment', 'date', 
+        'total_quantity', 'total_revenue'
+    )
+    list_filter = ('date', 'club')
+    search_fields = ('club__name', 'club_equipment__name')
+    date_hierarchy = 'date'
+    ordering = ('-date',)
+
+    readonly_fields = [f.name for f in ClubEquipmentStatistics._meta.fields if f.name != 'id']
+
+    def total_quantity(self, obj):
+        return obj.quantity_by_ower + obj.quantity_by_player
+    total_quantity.short_description = "Total Qty"
+
+    def total_revenue(self, obj):
+        return obj.revenue_by_owner + obj.revenue_by_player
+    total_revenue.short_description = "Total Revenue"
+
+    list_select_related = ('club', 'club_equipment')
+
+# ─────────────────────────────────────────────────────────────
+# 5.  Global Admin Actions (Optional)
+# ─────────────────────────────────────────────────────────────
+
+def recalculate_statistics(modeladmin, request, queryset):
+    """
+    Admin action to trigger recalculation of selected statistics.
+    Useful if signals missed updates or data drift occurred.
+    """
+    # Implementation depends on your recalculation logic
+    modeladmin.message_user(request, f"Recalculation queued for {queryset.count()} records")
+
+recalculate_statistics.short_description = "Recalculate selected statistics"
 
 class ClubPricingInline(admin.TabularInline):
     """Inline admin for ClubPricing"""

@@ -127,6 +127,7 @@ class Notification(models.Model):
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     notification_type = models.CharField(max_length=100)
+    helper_id = models.CharField(max_length=100)
     class Meta:
         db_table = 'notifications'
         verbose_name = _('Notification')

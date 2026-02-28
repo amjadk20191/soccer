@@ -29,7 +29,8 @@ def booking_notification_created(sender, instance, created, **kwargs):
                 sender_id = club["manager_id"],        
                notification_type = 'Booking Notification',
                title = 'اقتراح لتعديل الوقت',
-               message = notification_message
+               message = notification_message,
+               helper_id = instance.id
             )
 
         except Exception as e:

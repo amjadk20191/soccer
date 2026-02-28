@@ -39,13 +39,14 @@ class TeamInvitationService:
         Raises:
             ValidationError: If team has reached maximum member limit
         """
-        max_members = getattr(settings, 'MAX_TEAM_MEMBERS', 7)
+        max_members = getattr(settings, 'MAX_TEAM_MEMBERS')
         
         # Count active members efficiently using .count()
         current_count = TeamMember.objects.filter(
             team_id=team_id,
             status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE]
         ).count()
+        
         
         if current_count >= max_members:
             raise ValidationError(
@@ -86,7 +87,7 @@ class TeamInvitationService:
             raise PermissionDenied(detail="Only the team captain can invite players.")
         
         # Get player by username
-        player = User.objects.only('id', 'username').filter(username=username).first()
+        player = User.objects.only('id', 'username').filter(username=username, role=1).first()
         
         if not player:
             raise NotFound(detail=f"Player with username '{username}' not found.")
@@ -205,13 +206,13 @@ class TeamInvitationService:
                 
                 # Update request status to accepted
                 request.status = RequestStatus.ACCEPTED
-                request.save(update_fields=['status'])
+                request.save(update_fields=['status', 'updated_at'])
                 
                 return request, team_member
             else:
                 # Update request status to rejected
                 request.status = RequestStatus.REJECTED
-                request.save(update_fields=['status'])
+                request.save(update_fields=['status', 'updated_at'])
                 
                 return request, None
     
@@ -280,7 +281,7 @@ class TeamInvitationService:
         return invitations
     
     @classmethod
-    def search_users_by_username(cls, current_team, username_filter, limit=10):
+    def search_users_by_username(cls, captain_id, current_team, username_filter, limit=10):
         """
         Search users by username filter and return top matching users.
         
@@ -303,7 +304,7 @@ class TeamInvitationService:
                 is_active=True
             )
             .order_by('username')
-            .values('id', 'username', 'full_name')[:limit]
+            .values('id', 'username', 'full_name').exclude(id=captain_id)[:limit]
         )
 
         # Extract IDs to use in the next two queries

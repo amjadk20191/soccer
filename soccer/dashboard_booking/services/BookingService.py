@@ -32,6 +32,7 @@ class BookingService:
                 raise ValidationError("The status not valid")
 
     @classmethod
+    @transaction.atomic
     def convert_to_pending_pay(cls, booking):
         """Convert Pending_manager to Pending_pay"""
         if booking.status != BookingStatus.PENDING_MANAGER:
@@ -42,6 +43,7 @@ class BookingService:
         return booking
     
     @classmethod
+    @transaction.atomic
     def reject_booking(cls, booking):
         """Reject booking (from Pending_manager)"""
         if booking.status != BookingStatus.PENDING_MANAGER:
@@ -52,6 +54,7 @@ class BookingService:
         return booking
 
     @classmethod
+    @transaction.atomic
     def disputed_booking(cls, booking):
         """disputed booking (from Completed or Pending_pay)"""
         if not(booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
@@ -63,6 +66,7 @@ class BookingService:
 
 
     @classmethod
+    @transaction.atomic
     def no_show_booking(cls, booking):
         """no_show booking (from Completed or Pending_pay)"""
         if not(booking.by_owner and booking.status == BookingStatus.PENDING_PAY):
@@ -73,6 +77,7 @@ class BookingService:
         return booking
     
     @classmethod
+    @transaction.atomic
     def owner_canceled_booking(cls, booking):
         """CANCELED booking (from Completed or Pending_pay) by owner"""
         if not(booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
@@ -83,6 +88,7 @@ class BookingService:
         return booking
     
     @classmethod
+    @transaction.atomic
     def owner_completed_booking(cls, booking):
         """Completed booking (from Pending_pay) by owner"""
         if not(booking.by_owner and booking.status == BookingStatus.PENDING_PAY):

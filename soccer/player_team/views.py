@@ -310,12 +310,15 @@ class SearchUsersView(APIView):
             username: Username filter (required)
         """
         # Validate query parameter
+        captain_id = request.user.id
+
         serializer = UserSearchSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
         username_filter = serializer.validated_data['username']
         
         # Search users using service (returns top 10)
         users = TeamInvitationService.search_users_by_username(
+            captain_id,
             team_id,
             username_filter,
             limit=10
