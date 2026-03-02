@@ -1,9 +1,12 @@
 from django.db import transaction
 from dashboard_booking.models import  BookingNotification
-from  player_booking.models import Booking, BookingStatus
-from dashboard_manage.models import Pitch
+from  player_booking.models import Booking, BookingStatus, BookingEquipment
+from dashboard_manage.models import Pitch, ClubEquipment 
 from rest_framework.exceptions import ValidationError 
 from django.shortcuts import get_object_or_404
+from soccer.enm import BOOKING_STATUS_DENIED
+from django.db.models import Prefetch
+from .EquipmentBookingService import EquipmentBookingService
 
 class BookingService:
     
@@ -38,6 +41,47 @@ class BookingService:
         if booking.status != BookingStatus.PENDING_MANAGER:
             raise  ValidationError("Only bookings with Pending_manager status can be converted to Pending_pay")
         
+        has_overlap = Booking.objects.select_for_update().filter(
+            pitch=booking.pitch,
+            date=booking.date,
+            status__in=BOOKING_STATUS_DENIED,
+            start_time__lt=booking.end_time,
+            end_time__gt=booking.start_time
+        ).exclude(pk=booking.pk).exists() 
+        
+        if has_overlap:
+            raise ValidationError("Cannot complete this booking: It overlaps with another confirmed booking.")
+        
+        equipments=BookingEquipment.objects.values('id','quantity').filter(booking_id=booking.id)
+        if equipments:
+            equipment_ids = [ equipment['id'] for equipment in equipments]
+
+            
+            equipment_quantities = EquipmentBookingService.Get_booking_equipment_quantities(booking.club_id, booking.date, booking.start_time, booking.end_time, equipment_ids)
+
+
+            old_booked_map = {
+                item['equipment_id']: item['total_booked_quantity'] 
+                for item in equipment_quantities
+            }
+            new_booked_map = {
+                item['id']: item['quantity']
+                for item in equipments
+            }
+
+            club_equipments = ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=booking.club_id, is_active=True, id__in=equipment_ids, is_deteted=False)
+            if len(club_equipments) != len(equipment_ids):  
+                raise ValidationError({"equipment": "equipment must be active"})
+
+            for equipment in club_equipments:
+                quantity = (equipment['quantity'] - old_booked_map.get(equipment['id'],0)) - new_booked_map.get(equipment['id'],0)
+                if quantity < 0:
+                    raise ValidationError({
+                                        "equipment": f"equipment not available",
+                                        "id": equipment["id"],
+                                        })
+
+        
         booking.status = BookingStatus.PENDING_PAY
         booking.save(update_fields=['status', 'updated_at'])
         return booking
@@ -57,7 +101,9 @@ class BookingService:
     @transaction.atomic
     def disputed_booking(cls, booking):
         """disputed booking (from Completed or Pending_pay)"""
-        if not(booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
+        if not(
+            # booking.status == BookingStatus.COMPLETED or 
+            (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
             raise ValidationError("Only bookings with Completed or Pending_pay (created by owner) status can be rejected")
         
         booking.status = BookingStatus.DISPUTED
@@ -94,17 +140,6 @@ class BookingService:
         if not(booking.by_owner and booking.status == BookingStatus.PENDING_PAY):
             raise ValidationError("Only bookings with Completed or Pending_pay (created by owner) status can be rejected")
         
-        has_overlap = Booking.objects.filter(
-            pitch=booking.pitch,
-            date=booking.date,
-            status=BookingStatus.COMPLETED,  
-            start_time__lt=booking.end_time,
-            end_time__gt=booking.start_time
-        ).exclude(pk=booking.pk).exists() 
-        
-        if has_overlap:
-            raise ValidationError("Cannot complete this booking: It overlaps with another confirmed booking.")
-
         booking.status = BookingStatus.COMPLETED
         booking.save(update_fields=['status', 'updated_at'])
         return booking

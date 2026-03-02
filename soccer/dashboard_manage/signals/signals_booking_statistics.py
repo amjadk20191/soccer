@@ -41,6 +41,7 @@ from dashboard_manage.models import (
 from player_booking.models import (
     Booking,
     BookingStatus as S,
+    PayStatus
 )
 
 
@@ -63,6 +64,7 @@ def booking_pre_save(sender, instance, **kwargs):
                 "status", "by_owner", "final_price",
                 "club_id", "pitch_id",
                 "date", "start_time", "end_time",
+                "deposit", "payment_status"
             )
             .filter(pk=instance.pk)
             .first()
@@ -74,6 +76,7 @@ def booking_pre_save(sender, instance, **kwargs):
 # ─────────────────────────────────────────────────────────────
 
 def _num_deltas(status, by_owner, multiplier=1):
+   
     """
     {field: delta} for BookingNumStatistics.
     CANCELED is excluded — needs transition context; see _cancel_num_deltas.
@@ -114,7 +117,7 @@ def _num_deltas(status, by_owner, multiplier=1):
 
 
 def _price_deltas(status, by_owner, price, multiplier=1):
-    """{field: delta} for BookingPriceStatistics."""
+    
     amount = (price or Decimal("0.00")) * multiplier
     if status == S.COMPLETED:
         field = "money_from_completed_owner" if by_owner else "money_from_completed_player"
@@ -124,6 +127,24 @@ def _price_deltas(status, by_owner, price, multiplier=1):
         return {field: amount}
     return {}
 
+
+def _price_deltas_deposit(status, payment_status, deposit, by_owner, price, multiplier, instance_status=None):
+
+    if status == S.PENDING_PAY:
+        amount = (price - deposit) * multiplier
+
+        field = "money_from_completed_owner" if by_owner else "money_from_completed_player"
+        field2 = "money_from_pending_pay_owner" if by_owner else "money_from_pending_pay_player"
+       
+        if instance_status is not None and instance_status in [S.DISPUTED, S.NO_SHOW]:
+            return {field2: amount}
+
+        return {field: deposit, field2: amount}
+
+    if status == S.COMPLETED:
+        field = "money_from_completed_owner" if by_owner else "money_from_completed_player"
+        return {field: price * multiplier}
+    return {}
 
 def _cancel_num_deltas(prior_status, by_owner):
     """Extra {field: +1} when transitioning INTO CANCELED."""
@@ -310,11 +331,20 @@ def signal_update_price_statistics(sender, instance, created, **kwargs):
 
     price_undo: dict = {}
     price_new:  dict = {}
+    is_deposit=snap.payment_status == PayStatus.DEPOSIT
 
     if not created and snap:
-        _merge(price_undo, _price_deltas(snap.status, snap.by_owner, snap.final_price, multiplier=-1))
+        if is_deposit:
+            _merge(price_undo, _price_deltas_deposit(snap.status, snap.payment_status, snap.deposit, snap.by_owner, snap.final_price, -1, instance.status))
 
-    _merge(price_new, _price_deltas(instance.status, instance.by_owner, instance.final_price, multiplier=1))
+        else:
+            _merge(price_undo, _price_deltas(snap.status, snap.by_owner, snap.final_price, multiplier=-1))
+    
+    if is_deposit:
+        _merge(price_new, _price_deltas_deposit(instance.status, instance.payment_status, instance.deposit, instance.by_owner, instance.final_price, multiplier=1))
+
+    else:
+        _merge(price_new, _price_deltas(instance.status, instance.by_owner, instance.final_price, multiplier=1))
 
     if snap and price_undo:
         _upsert(BookingPriceStatistics, snap.club_id, snap.date, price_undo)

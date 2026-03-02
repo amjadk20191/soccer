@@ -159,7 +159,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                 (BookingStatus.PENDING_PLAYER.name, BookingStatus.PENDING_PLAYER.value),
             ], 
             BookingStatus.COMPLETED.name:[
-                (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
+                # (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
                 # (BookingStatus.NO_SHOW.name, BookingStatus.NO_SHOW.value),
                 (BookingStatus.CANCELED.name, BookingStatus.CANCELED.value),
             ],
