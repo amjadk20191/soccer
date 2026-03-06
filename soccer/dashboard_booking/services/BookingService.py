@@ -41,47 +41,7 @@ class BookingService:
         if booking.status != BookingStatus.PENDING_MANAGER:
             raise  ValidationError("Only bookings with Pending_manager status can be converted to Pending_pay")
         
-        has_overlap = Booking.objects.select_for_update().filter(
-            pitch=booking.pitch,
-            date=booking.date,
-            status__in=BOOKING_STATUS_DENIED,
-            start_time__lt=booking.end_time,
-            end_time__gt=booking.start_time
-        ).exclude(pk=booking.pk).exists() 
-        
-        if has_overlap:
-            raise ValidationError("Cannot complete this booking: It overlaps with another confirmed booking.")
-        
-        equipments=BookingEquipment.objects.values('id','quantity').filter(booking_id=booking.id)
-        if equipments:
-            equipment_ids = [ equipment['id'] for equipment in equipments]
-
-            
-            equipment_quantities = EquipmentBookingService.Get_booking_equipment_quantities(booking.club_id, booking.date, booking.start_time, booking.end_time, equipment_ids)
-
-
-            old_booked_map = {
-                item['equipment_id']: item['total_booked_quantity'] 
-                for item in equipment_quantities
-            }
-            new_booked_map = {
-                item['id']: item['quantity']
-                for item in equipments
-            }
-
-            club_equipments = ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=booking.club_id, is_active=True, id__in=equipment_ids, is_deteted=False)
-            if len(club_equipments) != len(equipment_ids):  
-                raise ValidationError({"equipment": "equipment must be active"})
-
-            for equipment in club_equipments:
-                quantity = (equipment['quantity'] - old_booked_map.get(equipment['id'],0)) - new_booked_map.get(equipment['id'],0)
-                if quantity < 0:
-                    raise ValidationError({
-                                        "equipment": f"equipment not available",
-                                        "id": equipment["id"],
-                                        })
-
-        
+        cls._check_if_has_overlap_booking(booking)
         booking.status = BookingStatus.PENDING_PAY
         booking.save(update_fields=['status', 'updated_at'])
         return booking
@@ -109,7 +69,6 @@ class BookingService:
         booking.status = BookingStatus.DISPUTED
         booking.save(update_fields=['status', 'updated_at'])
         return booking
-
 
     @classmethod
     @transaction.atomic
@@ -144,7 +103,6 @@ class BookingService:
         booking.save(update_fields=['status', 'updated_at'])
         return booking
     
-    
     @classmethod
     @transaction.atomic
     def convert_to_pending_player(cls, booking, club_id, new_date, new_start_time, new_end_time):
@@ -154,6 +112,8 @@ class BookingService:
         
         if not booking.player:
             raise ValidationError("Cannot send notification: booking has no player assigned")
+        
+        cls._check_if_has_overlap_booking(booking)
         
         # Create notification
         BookingNotification.objects.create(
@@ -173,6 +133,60 @@ class BookingService:
         booking.save(update_fields=['status', 'updated_at'])
         return booking
   
+    @classmethod
+    def _check_if_has_overlap_booking(cls, booking:Booking):
+        
+        has_overlap = Booking.objects.select_for_update().filter(
+            pitch=booking.pitch,
+            date=booking.date,
+            status__in=BOOKING_STATUS_DENIED,
+            start_time__lt=booking.end_time,
+            end_time__gt=booking.start_time
+        ).exclude(pk=booking.pk).exists() 
+        
+        if has_overlap:
+            raise ValidationError("Cannot complete this booking: It overlaps with another confirmed booking.")
+        
+        equipments=BookingEquipment.objects.values('equipment_id','quantity').filter(booking_id=booking.id)
+        if equipments:
+            equipment_ids = [ equipment['equipment_id'] for equipment in equipments]
+
+            
+            equipment_quantities = EquipmentBookingService.Get_booking_equipment_quantities(booking.club_id, booking.date, booking.start_time, booking.end_time, equipment_ids)
+
+            old_booked_map = {
+                item['equipment_id']: item['total_booked_quantity'] 
+                for item in equipment_quantities
+            }
+            new_booked_map = {
+                item['equipment_id']: item['quantity']
+                for item in equipments
+            }
+
+            print("new_booked_map")
+            print(new_booked_map)
+            print("equipment_quantities")
+            print(equipment_quantities)
+            club_equipments = ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=booking.club_id, is_active=True, id__in=equipment_ids, is_deteted=False)
+            print(club_equipments)
+            print(":::::::::::::::::::::::::::::::::")
+            print(equipment_ids)
+            if len(club_equipments) != len(equipment_ids):  
+                raise ValidationError({"equipment": "equipment must be active"})
+
+            for equipment in club_equipments:
+                print(equipment['quantity'])
+                print(old_booked_map.get(equipment['id'],0))
+                print(new_booked_map.get(equipment['id'],0))
+                quantity = (equipment['quantity'] - old_booked_map.get(equipment['id'],0)) - new_booked_map.get(equipment['id'],0)
+                if quantity < 0:
+                    raise ValidationError({
+                                        "equipment": f"equipment not available",
+                                        "id": equipment["id"],
+                                        })
+
+    
+    
     ################################## Player
     @classmethod
     @transaction.atomic

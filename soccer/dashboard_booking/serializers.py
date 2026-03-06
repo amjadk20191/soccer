@@ -111,7 +111,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     def validate_pitch(self, value):
         club_id = self.context['request'].auth.get('club_id')
 
-        if str(value.club_id) != club_id:
+        if str(value.club_id) != club_id and not value.is_active and value.is_deteted:
             raise serializers.ValidationError("Pitch does not belong to your club.")
         return value
     

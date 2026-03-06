@@ -63,7 +63,7 @@ class BookingEquipmentAdmin(admin.ModelAdmin):
 
     def total_price(self, obj):
         """Calculate total price"""
-        return obj.quantity * obj.price
+        return 0 #obj.quantity * obj.price
     total_price.short_description = 'Total Price'
     
     def get_queryset(self, request):

@@ -20,11 +20,12 @@ from dashboard_manage.models import (
 from collections import defaultdict
 
 
-from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration
 from .serializers import (ClubManagerSerializer, WeekdayPricingSerializer,
                         DatePricingSerializer, PitchSerializer,
                         PitchListSerializer, PitchActivationSerializer,
-                        ReadEquipmentSerializer, CreateClubEquipmentSerializer, ShowClubEquipmentSerializer)
+                        ReadEquipmentSerializer, CreateClubEquipmentSerializer, 
+                        ShowClubEquipmentSerializer, BookingDurationSerializer)
 
 class ClubManagerView(APIView):
 
@@ -76,6 +77,14 @@ class ClubManagerView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class BookingDurationViewSet(viewsets.ModelViewSet):
+    serializer_class = BookingDurationSerializer
+    def get_queryset(self):
+        return BookingDuration.objects.filter(
+            club_id=self.request.user.club, 
+        )
+
 
 class _BasePricingViewSet(viewsets.ModelViewSet):
 

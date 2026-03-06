@@ -331,7 +331,7 @@ def signal_update_price_statistics(sender, instance, created, **kwargs):
 
     price_undo: dict = {}
     price_new:  dict = {}
-    is_deposit=snap.payment_status == PayStatus.DEPOSIT
+    is_deposit=instance.payment_status == PayStatus.DEPOSIT
 
     if not created and snap:
         if is_deposit:

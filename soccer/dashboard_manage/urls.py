@@ -1,13 +1,15 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (ClubEquipmentGenericsList, ClubManagerView, WeekdayPricingViewSet, DatePricingViewSet, PitchViewSet, EquipmentGenericsList,
-                    RevenueReportView, BookingCountsReportView, HourlyUtilisationReportView, EquipmentSalesReportView,)
+                    RevenueReportView, BookingCountsReportView, HourlyUtilisationReportView, 
+                    EquipmentSalesReportView, BookingDurationViewSet)
 router = DefaultRouter()
 
 router.register(r'pricing/weekday', WeekdayPricingViewSet, basename='pricing-weekday')
 router.register(r'pricing/date', DatePricingViewSet, basename='pricing-date')
 router.register(r'pitches', PitchViewSet, basename='pitch')
 router.register(r'equipment', ClubEquipmentGenericsList, basename='equipment')
+router.register(r'booking-duration', BookingDurationViewSet, basename='booking-duration')
 
 urlpatterns = [
     path('manager-club/', ClubManagerView.as_view(), name='manager-club'),

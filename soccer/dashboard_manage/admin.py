@@ -263,7 +263,7 @@ class PitchAdmin(admin.ModelAdmin):
     list_display = (
         'id',
         'name', 'club', 'type', 'size_width', 'size_high', 'is_active',
-        'price_first', 'price_second', 'created_at'
+        'price_first', 'price_second', 'created_at','is_deteted'
     )
     list_filter = (
         'is_active', 'type', 'club', 'created_at', 'updated_at'
@@ -285,7 +285,7 @@ class PitchAdmin(admin.ModelAdmin):
             'fields': ('price_first', 'price_second', 'time_interval')
         }),
         (_('Status'), {
-            'fields': ('is_active',),
+            'fields': ('is_active','is_deteted'),
             'description': _('Inactive pitches will not be available for booking')
         }),
         (_('System Information'), {

@@ -1,8 +1,21 @@
 from rest_framework import serializers
-from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration
 from .services import EquipmentManageService
 
 
+class BookingDurationSerializer(serializers.ModelSerializer):
+    class Meta:
+            model = BookingDuration
+            fields = ['id', 'duration']
+    
+    def create(self, validated_data):
+        validated_data["club_id"]=self.context['request'].auth.get('club_id')
+        duration_exist=BookingDuration.objects.filter(club_id=validated_data["club_id"] ,duration=validated_data["duration"]).exists()
+        if duration_exist:
+            raise serializers.ValidationError({"error": "the duration allready exist"})
+
+
+        return super().create(validated_data)
 
 
 

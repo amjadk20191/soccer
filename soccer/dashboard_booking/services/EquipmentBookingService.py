@@ -34,6 +34,9 @@ class EquipmentBookingService:
         }
 
         club_equipments = ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=club_id, is_active=True, id__in=equipment_ids, is_deteted=False)
+        print(club_equipments)
+        print(":::::::::::::::::::::::::::::::::")
+        print(equipment_ids)
         if len(club_equipments) != len(equipment_ids):  
             raise ValidationError({"equipment": "equipment must be active"})
 

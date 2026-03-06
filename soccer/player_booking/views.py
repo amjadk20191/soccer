@@ -1,12 +1,17 @@
 from rest_framework import generics
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from soccer.enm import BOOKING_STATUS_DENIED
 
-from dashboard_manage.models import Club
+from dashboard_manage.models import Club, BookingDuration
 from django.db.models import Prefetch
 from management.models import Feature
-from .serializers import ClubListSerializer, ClubIDFilterSerializer
+from .serializers import ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer
 from player_booking.services.ClubTimeService import ClubTimeService
+from rest_framework.generics import get_object_or_404
+from rest_framework.views import APIView
+from .models import Booking
+from .services.ClubInfoService import ClubInfoService
 
 
 class ActiveClubListAPIView(generics.ListAPIView):
@@ -58,3 +63,41 @@ def ClubOpeningPrices(request):
     
     opening_time_with_pitches_prices = ClubTimeService.get_opening_time_with_pitches_prices(params['club_id'], 10, request)
     return Response(opening_time_with_pitches_prices)
+
+
+
+
+
+class BookingCreateForUser(generics.CreateAPIView):
+    # permission_classes = [IsAuthenticated, IsClubManager]
+
+    serializer_class = BookingCreateForUserSerializer
+
+
+class ShowBookingDurationForClub(APIView):
+    
+    def get(self, request, club_id):
+        duration = BookingDuration.objects.values("duration").filter(club_id=club_id)
+
+        return Response(duration)
+
+
+
+class ConsolidatedBookingListViewAlt(APIView):
+    """Alternative approach using helper method"""
+    
+    serializer_class = ConsolidatedBookingQuerySerializer
+    
+    def get(self, request):
+        serializer = self.get_serializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        validated_data=serializer.validated_data
+        times = ClubInfoService.get_free_booking_time(validated_data['pitch'], validated_data['club'], validated_data['date'])
+        return Response(times)
+
+
+    def get_serializer(self, *args, **kwargs):
+        """Helper method to instantiate serializer"""
+        return self.serializer_class(*args, **kwargs)
+    
+   

@@ -207,3 +207,12 @@ class ClubEquipmentStatistics(models.Model):
 
     class Meta:
         unique_together = ("club", "club_equipment", "date") 
+
+
+
+
+
+class BookingDuration (models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    duration = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
