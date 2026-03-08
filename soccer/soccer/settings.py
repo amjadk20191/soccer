@@ -169,4 +169,10 @@ MEDIA_ROOT =  os.path.join(BASE_DIR,'api/static/media')
 # Team Configuration
 MAX_TEAM_MEMBERS = 7  # Maximum number of active members allowed in a team
 MAX_TEAMS = 5
+MIN_NUM_DAY_BEFORE_CHALLENGE=0
+MAX_NUM_DAY_BEFORE_CHALLENGE=10
+MIN_NUM_DAY_BEFORE_BOOKING=0
+MAX_NUM_DAY_BEFORE_BOOKING=10
+MIN_TEAM_MEMBERS = 1
+
 STATIC_ROOT =  os.path.join(BASE_DIR,'api/static/static_api')

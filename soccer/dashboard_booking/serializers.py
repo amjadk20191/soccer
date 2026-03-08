@@ -59,7 +59,7 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = [
-            'id', 'date', 'start_time', 'end_time', 'price', 'status_display',
+            'id', 'date', 'start_time', 'end_time', 'price', 'final_price', 'status_display',
             'created_at', 'updated_at', 'player_name', 'full_name', 'pitch_name', 'phone', 'by_owner',
             'payment_status','note_owner', 'equipments'
         ]
@@ -68,6 +68,7 @@ class BookingListPitchSerializer(serializers.ModelSerializer):
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     full_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    price= serializers.FloatField(source='final_price')
     
     class Meta:
         model = Booking

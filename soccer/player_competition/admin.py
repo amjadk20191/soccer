@@ -26,7 +26,9 @@ class ChallengeAdmin(admin.ModelAdmin):
     def status_badge(self, obj):
         """Display status with color-coded badge"""
         status_colors = {
-            ChallengeStatus.PENDING: '#f39c12',    # Orange
+            ChallengeStatus.PENDING_PAY: "#f1c173",    # Orange
+            ChallengeStatus.PENDING_OWNER: "#ff9d00",    # Orange
+            ChallengeStatus.PENDING_TEAM: "#7c5517",    # Orange
             ChallengeStatus.ACCEPTED: '#27ae60',   # Green
             ChallengeStatus.REJECTED: '#e74c3c',   # Red
             ChallengeStatus.CANCELED: '#95a5a6',   # Gray
@@ -51,9 +53,9 @@ class ChallengeAdmin(admin.ModelAdmin):
     match_score.short_description = _('Score')
     
     list_display = (
-        'id', 'team', 'challenged_team', 'pitch', 'date',
+        'id', 'team', 'challenged_team', 'club', 'pitch', 'date',
         'challenge_duration', 'match_score', 'status_badge',
-        'created_by', 'created_at','status'
+        'created_at', 'status'
     )
     list_filter = (
         'status', 'date', 'created_at', 'updated_at',
@@ -62,25 +64,25 @@ class ChallengeAdmin(admin.ModelAdmin):
     search_fields = (
         'team__name', 'challenged_team__name',
         'pitch__name', 'pitch__club__name',
-        'created_by__phone', 'created_by__full_name'
+        
     )
     autocomplete_fields = (
         'booking', 'team', 'challenged_team',
-        'pitch', 'created_by'
+        'pitch',
     )
     readonly_fields = ('created_at', 'updated_at')
     ordering = ('-created_at',)
     date_hierarchy = 'date'
     list_select_related = (
         'team', 'challenged_team', 'pitch',
-        'pitch__club', 'created_by'
+        'pitch__club', 
     )
     list_editable = ('status',)  # Quick status update in list view
     
     fieldsets = (
         (_('Challenge Details'), {
             'fields': (
-                'team', 'challenged_team', 'pitch',
+                'team', 'challenged_team', 'pitch', 'club',
                 'date', 'start_time', 'end_time'
             )
         }),
@@ -96,7 +98,7 @@ class ChallengeAdmin(admin.ModelAdmin):
             'description': _('Associated booking if challenge was converted to a reservation')
         }),
         (_('System Information'), {
-            'fields': ('created_by', 'created_at', 'updated_at'),
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )

@@ -84,6 +84,7 @@ class TeamMember(models.Model):
             models.Index(fields=['player']),
             models.Index(fields=['player', 'status']),
             models.Index(fields=['player', 'team', 'status']),
+            models.Index(fields=['team', 'status']),   
         ]
 
 

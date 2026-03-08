@@ -5,6 +5,8 @@ from management.models import Feature
 from soccer.enm import BOOKING_STATUS_DENIED
 from  player_booking.models import Booking, BookingStatus, PayStatus, BookingEquipment
 from django.db import transaction
+from django.conf import settings
+from datetime import date, timedelta
 
 from dashboard_booking.services.PricingService import PricingService
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
@@ -28,7 +30,18 @@ class ConsolidatedBookingQuerySerializer(serializers.Serializer):
             raise serializers.ValidationError("Date cannot be in the past")
         return value
 
-
+class EquipmentAvailabilityQueryForUserSerializer(serializers.Serializer):
+    date = serializers.DateField(required=True)
+    start_time = serializers.TimeField(required=True)
+    end_time = serializers.TimeField(required=True)
+    club = serializers.UUIDField()
+    
+    def validate(self, data):
+        if data['start_time'] >= data['end_time']:
+            raise serializers.ValidationError({
+                "time": "start_time must be before end_time"
+            })
+        return data
 
 class TagSerializer(serializers.Serializer):
     name = serializers.CharField()
@@ -100,7 +113,12 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
             }
         }
         
-
+    def validate_date(self, value):
+        today = date.today()
+        if not (today + timedelta(days=settings.MIN_NUM_DAY_BEFORE_BOOKING) <= value <= today + timedelta(days=settings.MAX_NUM_DAY_BEFORE_BOOKING)):
+            raise serializers.ValidationError(f'Date must be between {settings.MIN_NUM_DAY_BEFORE_BOOKING} and {settings.MAX_NUM_DAY_BEFORE_BOOKING} days from today.')
+        return value
+    
     def validate(self, attrs):
         if attrs['start_time'] >= attrs['end_time']:
             raise serializers.ValidationError("End time must be after start time.")
