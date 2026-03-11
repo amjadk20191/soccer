@@ -44,6 +44,12 @@ class Club(models.Model):
     def __str__(self):
         return self.name
 
+class ClubOpeningTimeHistory(models.Model):
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    open_time = models.TimeField()
+    close_time = models.TimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
 
 class ClubPricing(models.Model):
     """Dynamic pricing for clubs"""

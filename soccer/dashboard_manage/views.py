@@ -231,7 +231,7 @@ URLs (add to your urlconf):
 # ─────────────────────────────────────────────────────────────
 # Shared helpers
 # ─────────────────────────────────────────────────────────────
-from .helpers import _parse_date_range, _get_club, _decimal, _int
+from .helpers import _parse_date_range, _get_club, _decimal, _int, _available_minutes_per_hour, _build_opening_map
 
 # ─────────────────────────────────────────────────────────────
 # 1. Revenue Report  — BookingPriceStatistics
@@ -420,28 +420,29 @@ class BookingCountsReportView(APIView):
 # ─────────────────────────────────────────────────────────────
 # 3. Hourly Utilisation Report  — ClubHourlyStatistics
 # ─────────────────────────────────────────────────────────────
-
 class HourlyUtilisationReportView(APIView):
     """
     GET /dashboard/hourly/?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
 
-    Returns total booked minutes per hour slot (0-23) across all pitches,
-    plus a per-pitch breakdown and a utilisation percentage.
+    Available minutes per hour respects the full priority chain:
+      specific-date override  >  weekday override  >  base club hours
 
-    Utilisation % = booked_minutes / (available_minutes_in_range)
-    where available_minutes_in_range = days_in_range * 60 per pitch.
+    DB hits: 3  (down from 4)
+      1. ClubOpeningTimeHistory  — base hours over time
+      2. ClubPricing             — both types in one query, split in Python
+      3. ClubHourlyStatistics    — booked minutes aggregated by hour + pitch
 
     Response shape:
     {
         "date_from": "2024-01-01",
         "date_to":   "2024-01-31",
         "days_in_range": 31,
-        "available_minutes_per_hour_per_pitch": 1860,
         "by_hour": [
             {
                 "hour": 8,
                 "label": "08:00",
                 "total_booked_minutes": 540,
+                "total_available_minutes": 1860,
                 "utilisation_pct": 29.0,
                 "by_pitch": [
                     {"pitch_id": "...", "booked_minutes": 300},
@@ -452,16 +453,17 @@ class HourlyUtilisationReportView(APIView):
         ]
     }
     """
-    # permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        club = _get_club(request)
+        club               = _get_club(request)
         date_from, date_to = _parse_date_range(request)
+        days_in_range      = (date_to - date_from).days + 1
 
-        days_in_range = (date_to - date_from).days + 1
-        # Each pitch has 60 minutes available per hour slot per day.
-        available_per_hour_per_pitch = days_in_range * 60
+        # ── Queries 1 & 2: true opening window per day ────────────────────
+        opening_map        = _build_opening_map(club.id, date_from, date_to)
+        available_per_hour = _available_minutes_per_hour(opening_map)
 
+        # ── Query 3: booked minutes by hour + pitch ───────────────────────
         rows = (
             ClubHourlyStatistics.objects
             .filter(club=club, date__gte=date_from, date__lte=date_to)
@@ -470,25 +472,26 @@ class HourlyUtilisationReportView(APIView):
             .order_by("hour", "pitch_id")
         )
 
-        # Group into {hour: {pitch_id: booked_minutes}}
-        hour_map = defaultdict(dict)
+        hour_map: dict = defaultdict(dict)
         for row in rows:
             hour_map[row["hour"]][str(row["pitch_id"])] = row["booked_minutes"]
 
         by_hour = []
         for hour in sorted(hour_map.keys()):
-            pitch_data = hour_map[hour]
-            total_booked = sum(pitch_data.values())
-            total_available = available_per_hour_per_pitch * len(pitch_data)
-            utilisation = (
+            pitch_data      = hour_map[hour]
+            total_booked    = sum(pitch_data.values())
+            pitch_count     = len(pitch_data)
+            total_available = available_per_hour.get(hour, 0) * pitch_count
+            utilisation     = (
                 round(total_booked / total_available * 100, 1)
                 if total_available > 0 else 0.0
             )
             by_hour.append({
-                "hour":  hour,
-                "label": f"{hour:02d}:00",
-                "total_booked_minutes": total_booked,
-                "utilisation_pct": utilisation,
+                "hour":                    hour,
+                "label":                   f"{hour:02d}:00",
+                "total_booked_minutes":    total_booked,
+                "total_available_minutes": total_available,
+                "utilisation_pct":         utilisation,
                 "by_pitch": [
                     {"pitch_id": pid, "booked_minutes": mins}
                     for pid, mins in sorted(pitch_data.items())
@@ -496,11 +499,10 @@ class HourlyUtilisationReportView(APIView):
             })
 
         return Response({
-            "date_from":   str(date_from),
-            "date_to":     str(date_to),
+            "date_from":    str(date_from),
+            "date_to":      str(date_to),
             "days_in_range": days_in_range,
-            "available_minutes_per_hour_per_pitch": available_per_hour_per_pitch,
-            "by_hour": by_hour,
+            "by_hour":      by_hour,
         })
 
 
@@ -550,7 +552,7 @@ class EquipmentSalesReportView(APIView):
         rows = (
             ClubEquipmentStatistics.objects
             .filter(club=club, date__gte=date_from, date__lte=date_to)
-            .values("club_equipment_id")
+            .values("club_equipment_id", "club_equipment__equipment__name")   # ← add this
             .annotate(
                 qty_owner=Sum("quantity_by_ower"),      # model typo preserved
                 rev_owner=Sum("revenue_by_owner"),
@@ -579,6 +581,7 @@ class EquipmentSalesReportView(APIView):
 
             by_equipment.append({
                 "club_equipment_id": str(row["club_equipment_id"]),
+                "equipment_name":    row["club_equipment__equipment__name"],   # ← add this
                 "quantity_by_owner":  qo,
                 "revenue_by_owner":   str(ro),
                 "quantity_by_player": qp,

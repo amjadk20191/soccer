@@ -10,3 +10,4 @@ class DashboardManageConfig(AppConfig):
         import dashboard_manage.signals.signals_booking_statistics 
         import dashboard_manage.signals.signals_booking_equipment_statistics
         import dashboard_manage.signals.signals_booking_equipment_statistics_fromBooking
+        import dashboard_manage.signals.signals_log_opening_time_change
