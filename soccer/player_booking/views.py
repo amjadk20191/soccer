@@ -3,11 +3,12 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from soccer.enm import BOOKING_STATUS_DENIED
 from rest_framework import status
+from dashboard_booking.services.PricingService import PricingService
 
 from dashboard_manage.models import Club, BookingDuration
 from django.db.models import Prefetch
 from management.models import Feature
-from .serializers import EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer
+from .serializers import BookingPriceRequestForUserSerializer, EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer
 from player_booking.services.ClubTimeService import ClubTimeService
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
@@ -134,3 +135,48 @@ class EquipmentAvailabilityForUserView(APIView):
             )
         
         return Response(available_equipments, status=status.HTTP_200_OK)
+    
+
+
+    
+class BookingPriceForUserAPIView(APIView):
+    
+    def post(self, request):
+        serializer = BookingPriceRequestForUserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        pitch = serializer.validated_data['pitch']
+        date = serializer.validated_data['date']
+        start_time = serializer.validated_data['start_time']
+        end_time = serializer.validated_data['end_time']
+        equipments = serializer.validated_data.get('equipments', None)
+    
+        club_id = serializer.validated_data['club']
+
+
+        response = dict()
+        # Calculate price
+        try:
+            price = PricingService.calculate_final_price(
+                pitch=pitch,
+                club_id=club_id,
+                date=date,
+                start_time=start_time,
+                end_time=end_time
+            )
+
+            if equipments:
+                response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments)
+                response['price'] = price + response['equipments_price']
+
+            response['pitch_price'] = price
+            print(response)
+
+
+            return Response(dict(response), status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            return Response({
+                'error': 'Failed to calculate price',
+                'detail': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)

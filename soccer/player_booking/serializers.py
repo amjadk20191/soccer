@@ -180,3 +180,20 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
                 equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments)
         
         return booking
+
+class EquipmentBookingSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    quantity = serializers.IntegerField(min_value=1)
+
+class BookingPriceRequestForUserSerializer(serializers.ModelSerializer):
+    equipments = EquipmentBookingSerializer(many=True, required=False)
+
+    class Meta:
+        model = Booking
+        fields = ['pitch', 'date', 'start_time', 'end_time', 'equipments', 'club']
+    
+    def validate(self, attrs):
+        if attrs['start_time'] >= attrs['end_time']:
+            raise serializers.ValidationError("End time must be after start time.")
+        return attrs
+        

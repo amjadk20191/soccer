@@ -55,3 +55,86 @@ class ShowChallengeTeamsSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.logo.logo.url)
         except (AttributeError, ValueError):
             return None
+        
+
+
+
+
+# ── Output ─────────────────────────────────────────────────────────────────────
+class TeamBriefSerializer(serializers.Serializer):
+    """Minimal team representation — no extra DB hit (data already select_related)."""
+    id             = serializers.UUIDField()
+    name           = serializers.CharField()
+    total_wins     = serializers.IntegerField()
+    total_losses   = serializers.IntegerField()
+    total_canceled = serializers.IntegerField()
+    goals_scored   = serializers.IntegerField()
+    clean_sheet    = serializers.IntegerField()
+    logo           = serializers.SerializerMethodField()
+
+    def get_logo(self, obj) -> str | None:
+        request = self.context.get("request")
+        image_field = obj.logo.logo          # Team.logo → TeamImage.logo (ImageField)
+        if not image_field:
+            return None
+        return request.build_absolute_uri(image_field.url) if request else image_field.url
+    
+
+
+class PitchBriefSerializer(serializers.Serializer):
+    id   = serializers.UUIDField()
+    name = serializers.CharField()
+
+
+class ClubBriefSerializer(serializers.Serializer):
+    id   = serializers.UUIDField()
+    name = serializers.CharField()
+
+
+class PendingChallengeSerializer(serializers.ModelSerializer):
+    team            = TeamBriefSerializer(read_only=True)
+    pitch           = PitchBriefSerializer(read_only=True)
+    club            = ClubBriefSerializer(read_only=True)
+
+    class Meta:
+        model  = Challenge
+        fields = [
+            "id",
+            "team",
+            "pitch",
+            "club",
+            "date",
+            "start_time",
+            "end_time",
+
+        ]
+
+
+class RequestedChallengeSerializer(serializers.ModelSerializer):
+    challenged_team = TeamBriefSerializer(read_only=True)
+    pitch           = PitchBriefSerializer(read_only=True)
+    club            = ClubBriefSerializer(read_only=True)
+
+    class Meta:
+        model  = Challenge
+        fields = [
+            "id",
+            "challenged_team",
+            "pitch",
+            "club",
+            "date",
+            "start_time",
+            "end_time",
+
+        ]
+
+# ── Input ──────────────────────────────────────────────────────────────────────
+
+class ChallengeReplySerializer(serializers.Serializer):
+    class Action(serializers.ChoiceField):
+        pass
+
+    ACCEPT = "accept"
+    REJECT = "reject"
+
+    action = serializers.ChoiceField(choices=[ACCEPT, REJECT])

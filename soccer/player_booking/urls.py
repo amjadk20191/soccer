@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import EquipmentAvailabilityForUserView, ConsolidatedBookingListViewAlt, ActiveClubListAPIView, ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub
+from .views import BookingPriceForUserAPIView, EquipmentAvailabilityForUserView, ConsolidatedBookingListViewAlt, ActiveClubListAPIView, ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub
 
 
 urlpatterns = [
@@ -10,4 +10,6 @@ urlpatterns = [
     path("clubs/", ActiveClubListAPIView.as_view(), name="active-club-list"),
     path("make-booking/", BookingCreateForUser.as_view(), name="make_booking_by_user"),
     path("availabil-equipment/", EquipmentAvailabilityForUserView.as_view(), name="availabil-equipment"),
+    path('calculate-price/', BookingPriceForUserAPIView.as_view(), name='booking-price'),
+
 ]

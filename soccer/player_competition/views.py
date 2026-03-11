@@ -3,13 +3,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from player_team.serializers import TeamMember, MemberStatus, Team
 from rest_framework import status
-from .serializers import CreateChallengeSerializer
-from .services import CreateChallengeService
+from .serializers import (CreateChallengeSerializer, PendingChallengeSerializer,
+                           ChallengeReplySerializer, ShowChallengeTeamsSerializer,
+                           RequestedChallengeSerializer)
 
 from rest_framework.generics import ListAPIView
+from .services import CreateChallengeService, ShowChallengeTeamService, GetPendingChallengesService, ReplyChallengeService, GetSentChallengesService, CancelChallengeService
 
-from .serializers import ShowChallengeTeamsSerializer
-from .services import ShowChallengeTeamService
 
 
 class ChallengeTeamsView(ListAPIView):
@@ -19,9 +19,6 @@ class ChallengeTeamsView(ListAPIView):
         return ShowChallengeTeamService.get_challenge_teams(
             self.kwargs['team_id'], self.request.user.id)
     
-
-
-
 class CreateChallengeAPIView(APIView):
     """
     POST API to create a new match challenge between two teams.
@@ -59,4 +56,85 @@ class CreateChallengeAPIView(APIView):
         #         status=status.HTTP_400_BAD_REQUEST
         #     )
             
-        
+
+
+
+class PendingChallengeListView(APIView):
+    """
+    GET /teams/{team_id}/challenges/pending/
+
+    Returns all PENDING_TEAM challenges for the given team.
+    Only the team captain can call this.
+    """
+    # permission_classes = [IsAuthenticated]
+
+    def get(self, request, team_id):
+        challenges = GetPendingChallengesService.execute(
+            team_id           = team_id,
+            requesting_user_id = request.user.id,
+        )
+        serializer = PendingChallengeSerializer(challenges, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ChallengeReplyView(APIView):
+    """
+    POST /challenges/{challenge_id}/reply/
+
+    Body: { "action": "accept" | "reject" }
+
+    Only the captain of the challenged team can call this.
+    """
+    # permission_classes = [IsAuthenticated]
+
+    def post(self, request, challenge_id):
+        serializer = ChallengeReplySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        challenge = ReplyChallengeService.execute(
+            challenge_id       = challenge_id,
+            action             = serializer.validated_data["action"],
+            requesting_user_id = request.user.id,
+        )
+
+        return Response(
+            {serializer.validated_data["action"]},
+            status=status.HTTP_200_OK,
+        )
+    
+
+
+
+class SentChallengeListView(APIView):
+    """
+    GET /teams/{team_id}/challenges/sent/
+
+    Returns all live challenges sent BY the given team.
+    Only the team captain can call this.
+    """
+
+    def get(self, request, team_id):
+        challenges = GetSentChallengesService.execute(
+            team_id            = team_id,
+            requesting_user_id = request.user.id,
+        )
+        serializer = RequestedChallengeSerializer(challenges, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ChallengeCancelView(APIView):
+    """
+    POST /challenges/{challenge_id}/cancel/
+
+    Cancels a challenge the captain's team sent.
+    Only the captain of the *sending* team can call this.
+    """
+
+    def post(self, request, challenge_id):
+        challenge = CancelChallengeService.execute(
+            challenge_id       = challenge_id,
+            requesting_user_id = request.user.id,
+        )
+        return Response(
+            status=status.HTTP_200_OK,
+        )

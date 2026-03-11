@@ -50,7 +50,7 @@ class Booking(models.Model):
     by_owner = models.BooleanField(default=False)# if False the booking done by player
     phone_validator = RegexValidator(regex=r'^09\d{8}$', message=_('Phone number must start with "09" and contain exactly 10 digits (e.g., 0912345678).'))
     phone = models.CharField(validators=[phone_validator], max_length=10, null=True, blank=True, default=None)
-    
+    is_challenge = models.BooleanField(default=False)
 
 
     class Meta:

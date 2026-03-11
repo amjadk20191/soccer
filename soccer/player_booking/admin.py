@@ -41,7 +41,7 @@ class BookingEquipmentAdmin(admin.ModelAdmin):
             'fields': ('booking', 'equipment', 'equipment_def')
         }),
         ('Item Details', {
-            'fields': ('quantity', 'price')
+            'fields': ('quantity', 'price', 'is_challenge', 'by_owner')
         }),
         ('Financial', {
             'fields': ('total_price',),
