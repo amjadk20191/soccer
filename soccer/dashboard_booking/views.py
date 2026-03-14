@@ -20,6 +20,7 @@ from .serializers import (
     BookingListPitchSerializer,
     EquipmentAvailabilityQuerySerializer
 )
+from django.conf import settings
 
 # from .permissions import IsClubManager
 from dashboard_booking.services.BookingService import BookingService
@@ -275,8 +276,7 @@ class BookingstatusAPIView(APIView):
 class ClubOpeningPrices(APIView):
     
     def get(self, request):
-        
-        opening_time_with_pitches_prices = ClubTimeForOwnerService.get_opening_time_with_pitches_prices(request.auth.get('club_id'), 10, request)
+        opening_time_with_pitches_prices = ClubTimeForOwnerService.get_opening_time_with_pitches_prices(request.auth.get('club_id'), settings.MAX_NUM_DAY_BEFORE_BOOKING, request)
         return Response(opening_time_with_pitches_prices)
 
 

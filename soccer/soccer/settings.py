@@ -57,6 +57,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "management.middleware.ErrorLoggingMiddleware", #logging
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
@@ -159,6 +161,11 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+######TELEGRAM
+##test username: AASoTest_bot /// name: AASoTest
+TELEGRAM_BOT_TOKEN = "8544207972:AAHelFEP2nGpMICZSWEKOudwPfZN_pYoEu0"
+TELEGRAM_CHAT_ID   = -4658251184
+
 
 
 
@@ -174,5 +181,7 @@ MAX_NUM_DAY_BEFORE_CHALLENGE=10
 MIN_NUM_DAY_BEFORE_BOOKING=0
 MAX_NUM_DAY_BEFORE_BOOKING=10
 MIN_TEAM_MEMBERS = 1
+MIN_TEAM_MEMBERS_FOR_CHALLENGE = 1
+
 
 STATIC_ROOT =  os.path.join(BASE_DIR,'api/static/static_api')

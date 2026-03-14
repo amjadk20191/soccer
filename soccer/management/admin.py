@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import Tag, Feature
+from .models import Tag, Feature, RequestErrorLog
 
 
 @admin.register(Tag)
@@ -39,3 +39,17 @@ class FeatureAdmin(admin.ModelAdmin):
     ordering = ('-created_at',)
     list_select_related = ('club', 'tag')
     date_hierarchy = 'created_at'
+
+
+
+@admin.register(RequestErrorLog)
+class RequestErrorLogAdmin(admin.ModelAdmin):
+    list_display  = ("created_at", "method", "path", "exception_type", "user_id", "ip_address")
+    list_filter   = ("method", "exception_type", "status_code")
+    search_fields = ("path", "exception_type", "exception_msg", "user_id", "ip_address")
+    readonly_fields = [f.name for f in RequestErrorLog._meta.get_fields()]
+    ordering      = ("-created_at",)
+
+    def has_add_permission(self, request):    return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_delete_permission(self, request, obj=None): return False

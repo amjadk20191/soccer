@@ -7,9 +7,24 @@ from .models import (Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment,
     BookingNumStatistics,
     ClubHourlyStatistics,
     ClubEquipmentStatistics,
+    ClubOpeningTimeHistory
 )
 from django.utils.html import mark_safe
 
+@admin.register(ClubOpeningTimeHistory)
+class ClubOpeningTimeHistoryAdmin(admin.ModelAdmin):
+    list_display = ('club', 'open_time', 'close_time', 'created_at')
+    list_filter = ('created_at', 'club')
+    search_fields = ('club__name',)
+    ordering = ('-created_at',)
+    readonly_fields = ()  # created_at is now editable, remove it from readonly if it was there
+
+    def has_add_permission(self, request):
+        return False
+    def has_change_permission(self, request, obj=None):
+        return True   # ✅ must be True to allow editing
+    def has_delete_permission(self, request, obj=None):
+        return False
 # ────────────────────────────────────────────────────────
 # 1. Booking Price Statistics
 # ────────────────────────────────────────────────────────

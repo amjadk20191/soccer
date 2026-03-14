@@ -7,6 +7,7 @@ from core.utils import upload_to_model_name
 from .validators import validate_working_days
 import uuid
 
+from django.utils import timezone
 
 class Club(models.Model):
     """Football clubs/venues"""
@@ -48,8 +49,7 @@ class ClubOpeningTimeHistory(models.Model):
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
     open_time = models.TimeField()
     close_time = models.TimeField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
+    created_at = models.DateField(default=timezone.localdate)
 
 class ClubPricing(models.Model):
     """Dynamic pricing for clubs"""

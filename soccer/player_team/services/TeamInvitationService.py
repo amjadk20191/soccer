@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from core.models import User
 from ..models import Team, TeamMember, Request, MemberStatus
-from django.db.models import Q
+from django.db.models import Count, Q
 
 
 class RequestStatus:
@@ -385,28 +385,46 @@ class TeamInvitationService:
             # Player removing themselves
             target_player_id = user_id
         
-        # Get team member with optimized query
-        team_member = TeamMember.objects.only(
-            'id'
-        ).filter(
+
+        # Single query — get player + active member count in one shot
+        team_data = TeamMember.objects.filter(
             team_id=team_id,
-            player_id=target_player_id,
-            status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE],  # Only active/inactive can be removed
-            is_captain=False
-        ).first()
-        
-        if not team_member:
+        ).aggregate(
+            player_exists=Count(
+                'id',
+                filter=Q(
+                    player_id=target_player_id,
+                    status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE],
+                    is_captain=False,
+                )
+            ),
+            active_count=Count(
+                'id',
+                filter=Q(status=MemberStatus.ACTIVE)
+            ),
+        )
+
+        if not team_data['player_exists']:
             raise NotFound(detail="Player is not an active member of this team.")
 
-        
-        # Update status to OUT and set leave_at timestamp
+        # -1 because we're removing this player
+        if team_data['active_count'] - 1 < settings.MIN_TEAM_MEMBERS_FOR_CHALLENGE:
+            Team.objects.filter(id=team_id).update(challenge_mode=False)
+
+        # Fetch only to update — now we know it exists
+        team_member = TeamMember.objects.only('id', 'status', 'leave_at').get(
+            team_id=team_id,
+            player_id=target_player_id,
+            status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE],
+            is_captain=False,
+        )
+
         with transaction.atomic():
             team_member.status = MemberStatus.OUT
             team_member.leave_at = timezone.now()
             team_member.save(update_fields=['status', 'leave_at'])
-        
-        return team_member
 
+        return team_member
 
     @classmethod
     def delete_invite(cls, captain_id, team_id, invite_id):

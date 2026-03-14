@@ -56,7 +56,8 @@ class ClubManagerView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    @transaction.atomic
     def patch(self, request):
         """Partial update club data"""
         club = self.get_object()

@@ -44,7 +44,7 @@ def _build_opening_map(club_id, date_from, date_to):
     # ── Query 1: base opening-time history ───────────────────────────────
     history = list(
         ClubOpeningTimeHistory.objects
-        .filter(club_id=club_id, created_at__date__lte=date_to)
+        .filter(club_id=club_id, created_at__lte=date_to)
         .order_by("created_at")
         .values("created_at", "open_time", "close_time")
     )
@@ -83,7 +83,7 @@ def _build_opening_map(club_id, date_from, date_to):
     history_idx   = 0
 
     for i, entry in enumerate(history):
-        if entry["created_at"].date() <= date_from:
+        if entry["created_at"] <= date_from:
             current_open  = entry["open_time"]
             current_close = entry["close_time"]
             history_idx   = i + 1   # next entry to check starts here
@@ -99,7 +99,7 @@ def _build_opening_map(club_id, date_from, date_to):
 
         # Advance base window if a newer history entry applies.
         while history_idx < len(history):
-            if history[history_idx]["created_at"].date() <= current_date:
+            if history[history_idx]["created_at"] <= current_date:
                 current_open  = history[history_idx]["open_time"]
                 current_close = history[history_idx]["close_time"]
                 history_idx  += 1
