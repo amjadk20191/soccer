@@ -35,3 +35,11 @@ def validate_working_days(value):
                     "value_type": type(is_open).__name__,
                 },
             )
+    
+    if not any(value.values()):
+        raise ValidationError(
+                message="must be at lest one True",
+                code="invalid_value",
+
+            )
+        

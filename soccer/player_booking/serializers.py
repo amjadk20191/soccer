@@ -127,6 +127,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
         print(f"Day Number: {day_number}")
         print(attrs["club"])
         print(type(attrs["club"]))
+        #TODO : fix it 
         is_day_off = Club.objects.values('working_days').filter(id=attrs["club"], is_active=True).first()
         if not is_day_off:
             raise serializers.ValidationError({"error": "club not Active"})
@@ -160,6 +161,26 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
         if overlapping:
             raise serializers.ValidationError("This time slot overlaps with an existing booking.")
         
+        #with the user himself
+        player = self.context['request'].user
+        overlapping = Booking.objects.filter(
+            player=player,
+            date=date,
+            status__in= [
+            BookingStatus.PENDING_PAY.value,
+            BookingStatus.COMPLETED.value,
+            BookingStatus.PENDING_PLAYER.value,
+            BookingStatus.PENDING_MANAGER.value,
+        ]
+        ).filter(
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists()
+        
+        if overlapping:
+            raise serializers.ValidationError("This time slot overlaps with an existing booking.")
+        
+        
         return attrs
     
     def create(self, validated_data):
@@ -177,7 +198,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
                 final_price=price,
                 **validated_data)
             if equipments:
-                equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments)
+                equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments, validated_data['start_time'],  validated_data['end_time'])
         
         return booking
 

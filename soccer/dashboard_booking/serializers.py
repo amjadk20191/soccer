@@ -191,7 +191,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
                 final_price=price,
                 **validated_data)
             if equipments:
-                equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments)
+                equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments, validated_data['start_time'],  validated_data['end_time'])
         
         return booking
 

@@ -9,6 +9,7 @@ from soccer.enm import BOOKING_STATUS_DENIED
 from django.db.models import F
 from django.conf import settings
 from django.db import transaction
+from datetime import datetime, date
 
 
 class EquipmentBookingService:
@@ -16,7 +17,7 @@ class EquipmentBookingService:
 
     @classmethod
     @transaction.atomic
-    def Create_Equipment_Booking(cls, club_id, booking:Booking, equipments):
+    def Create_Equipment_Booking(cls, club_id, booking:Booking, equipments, start_time, end_time):
         
         final_price = booking.price
         equipment_ids = [ equipment['id'] for equipment in equipments]
@@ -28,6 +29,16 @@ class EquipmentBookingService:
             item['equipment_id']: item['total_booked_quantity'] 
             for item in equipment_quantities
         }
+        start_dt = datetime.combine(date.today(), start_time)
+        end_dt = datetime.combine(date.today(), end_time)
+
+        # Handle overnight case (e.g., 11 PM to 1 AM)
+        if end_dt < start_dt:
+            end_dt += timedelta(days=1)
+
+        # Get difference in hours as a float
+        time = (end_dt - start_dt).total_seconds() / 3600
+        
         new_booked_map = {
             item['id']: item['quantity']
             for item in equipments
@@ -49,7 +60,7 @@ class EquipmentBookingService:
                                     "id": equipment["id"],
                                     })
 
-            final_equipment_price = new_booked_map.get(equipment['id'],0) * equipment['price']
+            final_equipment_price = new_booked_map.get(equipment['id'],0) * equipment['price']* Decimal(str(time))
             BookingEquipment_list.append(BookingEquipment(
                 booking_id=booking.id,
                 equipment_id=equipment['id'],
@@ -69,7 +80,7 @@ class EquipmentBookingService:
         return equipments
     
     @classmethod
-    def Get_Equipment_Price(cls, club_id, equipments):
+    def Get_Equipment_Price(cls, club_id, equipments, start_time, end_time):
         
         final_price = 0
         equipment_ids = [ equipment['id'] for equipment in equipments]
@@ -82,15 +93,23 @@ class EquipmentBookingService:
         club_equipments = ClubEquipment.objects.values('id', 'quantity', 'price').filter(club_id=club_id, is_active=True, id__in = equipment_ids, is_deteted=False)
         if len(club_equipments) != len(equipment_ids):  
             raise ValidationError({"equipment": "equipment must be active"})
+        start_dt = datetime.combine(date.today(), start_time)
+        end_dt = datetime.combine(date.today(), end_time)
+
+        # Handle overnight case (e.g., 11 PM to 1 AM)
+        if end_dt < start_dt:
+            end_dt += timedelta(days=1)
+
+        # Get difference in hours as a float
+        time = (end_dt - start_dt).total_seconds() / 3600
 
         for equipment in club_equipments:
-           
-            final_equipment_price = new_booked_map.get(str(equipment['id']),0) * equipment['price']
-            new_booked_map[str(equipment['id'])] = final_equipment_price
+            final_equipment_price = new_booked_map.get(str(equipment['id']),0) * equipment['price'] 
+            new_booked_map[str(equipment['id'])] = final_equipment_price * Decimal(str(time))
             final_price = final_price + final_equipment_price
 
-        new_booked_map['equipments_price'] = final_price
-
+        new_booked_map['equipments_price'] = final_price * Decimal(str(time))
+        
 
         return new_booked_map
 

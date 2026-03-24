@@ -1,0 +1,13 @@
+# Environment files (The most important part)
+.env
+.env.local
+.env.*
+!.env.example  # Keep the template, but ignore the actual secrets
+
+# Python virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+**/*.pyc

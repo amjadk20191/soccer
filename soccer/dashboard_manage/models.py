@@ -59,7 +59,7 @@ class ClubPricing(models.Model):
         (1, _('Weekday')),
         (2, _('date'))
     ])
-    day_of_week = models.SmallIntegerField(blank=True, null=True, validators=[MinValueValidator(0), MaxValueValidator(7)])
+    day_of_week = models.SmallIntegerField(blank=True, null=True, validators=[MinValueValidator(0), MaxValueValidator(6)])
     date = models.DateField(blank=True, null=True)
     start_time = models.TimeField()
     end_time = models.TimeField()

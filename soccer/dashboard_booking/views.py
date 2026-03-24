@@ -237,7 +237,7 @@ class BookingPriceAPIView(APIView):
             )
 
             if equipments:
-                response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments)
+                response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments, start_time, end_time)
                 response['price'] = price + response['equipments_price']
 
             response['pitch_price'] = price
