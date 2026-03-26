@@ -1,3 +1,5 @@
+from wsgiref import types
+
 from rest_framework import viewsets, mixins, permissions, parsers, exceptions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,7 +8,7 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from django.db import transaction
 from datetime import date
-
+from player_booking.models import Booking
 from django.db.models import Sum
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -20,7 +22,7 @@ from dashboard_manage.models import (
 from collections import defaultdict
 
 
-from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration, PitchTypes
 from .serializers import (ClubManagerSerializer, WeekdayPricingSerializer,
                         DatePricingSerializer, PitchSerializer,
                         PitchListSerializer, PitchActivationSerializer,
@@ -120,6 +122,14 @@ class DatePricingViewSet(_BasePricingViewSet):
 
         )
 
+class GetPitchesTypesView(APIView):
+    def get(self, request):
+        types = [
+            { "name": label}
+            for value, label in PitchTypes.choices
+        ]
+        return Response(types)
+
 class PitchViewSet(viewsets.ModelViewSet):
     # permission_classes = [permissions.IsAuthenticated]
 
@@ -144,7 +154,17 @@ class PitchViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-
+        
+        if Booking.objects.filter(pitch=instance, status__in=[
+            Booking.BookingStatus.PENDING_MANAGER,
+            Booking.BookingStatus.PENDING_PAY,
+            BookingStatus.COMPLETED
+        ]).exists():
+            return Response(
+                {"detail": "Cannot delete pitch with pending bookings."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         instance.is_deteted = True
         instance.is_active = False
         instance.save(update_fields=['is_deteted', 'is_active'])

@@ -75,7 +75,12 @@ class ClubPricing(models.Model):
         ]
     
 
-
+class PitchTypes(models.IntegerChoices):
+    Natural_grass = 1, _('Natural_grass')
+    Industrial_grass = 2, _('Industrial_grass')
+    Ground = 3, _('Ground')
+    earthy = 4, _('earthy')
+    
 
 
 

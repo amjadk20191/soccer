@@ -73,7 +73,7 @@ class BookingListPitchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = [
-            'id', 'date', 'start_time', 'end_time', 'price', 'status_display',
+            'id', 'date', 'start_time', 'end_time', 'price', 'deposit', 'status_display',
             'player_name', 'full_name', 'phone', 'by_owner'
         ]
 

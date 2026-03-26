@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from dashboard_manage.models import Club, Pitch
+from dashboard_manage.models import Club, ClubPricing, Pitch
 from management.models import Feature
 from soccer.enm import BOOKING_STATUS_DENIED
 from  player_booking.models import Booking, BookingStatus, PayStatus, BookingEquipment
@@ -127,13 +127,13 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
         print(f"Day Number: {day_number}")
         print(attrs["club"])
         print(type(attrs["club"]))
-        #TODO : fix it 
+        is_date_off = ClubPricing.objects.filter(club_id=attrs["club"], type=2, date=attrs["date"]).exists()
         is_day_off = Club.objects.values('working_days').filter(id=attrs["club"], is_active=True).first()
         if not is_day_off:
             raise serializers.ValidationError({"error": "club not Active"})
 
         print(is_day_off)
-        if not is_day_off['working_days'][str(day_number)]:
+        if not (is_day_off['working_days'][str(day_number)] or is_date_off):
             raise serializers.ValidationError({"error": "this weekday is an off day."})
         print("//////////////////////////")
         pitch_exist = attrs['pitch'].club_id!=attrs['club'] or attrs['pitch'].is_deteted==True or attrs['pitch'].is_active==False
