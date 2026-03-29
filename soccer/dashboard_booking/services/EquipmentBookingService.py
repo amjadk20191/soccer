@@ -49,15 +49,15 @@ class EquipmentBookingService:
         print(":::::::::::::::::::::::::::::::::")
         print(equipment_ids)
         if len(club_equipments) != len(equipment_ids):  
-            raise ValidationError({"equipment": "equipment must be active"})
+            raise ValidationError({"error": "العدة يجب أن تكون نشطة."})
 
         BookingEquipment_list = list()
         for equipment in club_equipments:
             quantity = (equipment['quantity'] - old_booked_map.get(equipment['id'],0)) - new_booked_map.get(equipment['id'],0)
             if quantity < 0:
                 raise ValidationError({
-                                    "equipment": f"equipment not available",
-                                    "id": equipment["id"],
+                                    "error": f"الكمية المطلوبة من المعدات  غير متوفرة.",
+                    
                                     })
 
             final_equipment_price = new_booked_map.get(equipment['id'],0) * equipment['price']* Decimal(str(time))
@@ -92,7 +92,7 @@ class EquipmentBookingService:
 
         club_equipments = ClubEquipment.objects.values('id', 'quantity', 'price').filter(club_id=club_id, is_active=True, id__in = equipment_ids, is_deteted=False)
         if len(club_equipments) != len(equipment_ids):  
-            raise ValidationError({"equipment": "equipment must be active"})
+            raise ValidationError({"error": "العدة يجب أن تكون نشطة."})
         start_dt = datetime.combine(date.today(), start_time)
         end_dt = datetime.combine(date.today(), end_time)
 

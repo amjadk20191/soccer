@@ -1,4 +1,4 @@
-from rest_framework.exceptions import PermissionDenied, NotFound
+from rest_framework.exceptions import PermissionDenied
 
 from ..models import Challenge, ChallengeStatus
 from player_team.models import Team
@@ -19,7 +19,7 @@ class GetPendingChallengesService:
 
         # ── Query 1: auth guard ────────────────────────────────────────────
         if not Team.objects.filter(id=team_id, captain_id=requesting_user_id, is_active=True).exists():
-            raise PermissionDenied("You are not the captain of this team or the team does not exist.")
+            raise PermissionDenied(detail={"error": "أنت لست قائد هذا الفريق أو الفريق غير موجود."})
 
         # ── Query 2: challenges ────────────────────────────────────────────
         # select_related pulls team / pitch / club in the same JOIN —

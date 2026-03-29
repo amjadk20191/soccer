@@ -12,9 +12,9 @@ import uuid
 
 
 class FootPreference(models.IntegerChoices):
-    LEFT = 1, _('Left')
-    RIGHT = 2, _('Right')
-    BOTH = 3, _('Both')
+    LEFT = 1, _('يسار')
+    RIGHT = 2, _('يمين')
+    BOTH = 3, _('كلاهما')
 
 
 class CustomUserManager(BaseUserManager):
@@ -23,7 +23,7 @@ class CustomUserManager(BaseUserManager):
     def create_user(self, phone, password=None, **extra_fields):
         """Create and save a regular user"""
         if not phone:
-            raise ValidationError(_('phone is required'))
+            raise ValidationError({"error": "رقم الهاتف مطلوب."})
         
         
         user = self.model(phone=phone, **extra_fields)

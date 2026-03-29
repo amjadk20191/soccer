@@ -168,7 +168,7 @@ class TeamDetailsView(APIView):
         
         if not is_member:
             raise PermissionDenied(
-                detail="You must be a member of this team to view its details."
+                detail={"error": "يجب أن تكون عضواً في هذا الفريق لعرض تفاصيله."}
             )
         
         # Serialize team details (includes members)

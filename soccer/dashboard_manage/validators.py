@@ -4,7 +4,7 @@ def validate_working_days(value):
     # 1. Must be a dict
     if not isinstance(value, dict):
         raise ValidationError(
-            message="working_days must be a JSON object.",
+            message="ايام العمل يجب أن تكون json.",
             code="invalid_type",
             params={"received_type": type(value).__name__},
         )
@@ -15,7 +15,7 @@ def validate_working_days(value):
     # 2. Must contain exactly keys 0–6
     if received_keys != allowed_keys:
         raise ValidationError(
-            message="working_days must contain exactly the keys %(expected)s.",
+            message="ساعات العمل يجب أن تحتوي على مفاتيح صحيحة.",
             code="invalid_keys",
             params={
                 "expected": sorted(allowed_keys),
@@ -27,7 +27,7 @@ def validate_working_days(value):
     for day, is_open in value.items():
         if not isinstance(is_open, bool):
             raise ValidationError(
-                message="Value for day %(day)s must be a boolean.",
+                message="قيمة اليوم يجب أن تكون صحيحة.",
                 code="invalid_value",
                 params={
                     "day": day,
@@ -38,7 +38,7 @@ def validate_working_days(value):
     
     if not any(value.values()):
         raise ValidationError(
-                message="must be at lest one True",
+                message="يجب أن يكون هناك يوم واحد على الأقل مفتوح.",
                 code="invalid_value",
 
             )

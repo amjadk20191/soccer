@@ -187,7 +187,7 @@ def _parse_date_range(request):
 
     if date_from > date_to:
         raise ValidationError(
-            {"detail": "date_from must be on or before date_to."}
+            {"error": "يوم البداية يجب أن يكون قبل أو يساوي يوم النهاية."}
         )
 
     return date_from, date_to

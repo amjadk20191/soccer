@@ -34,7 +34,7 @@ class TeamService:
         """
         # Validate team name
         if not name or not name.strip():
-            raise ValidationError(detail="Team name is required.")
+            raise ValidationError(detail={"error": "اسم الفريق مطلوب."})
         
         # Check if user is already in X active team
         existing_team = TeamMember.objects.only('id').filter(
@@ -44,7 +44,7 @@ class TeamService:
         ).count()
         
         if existing_team >= settings.MAX_TEAMS:
-            raise ValidationError(detail={"error":"You are already in 5 active team."})
+            raise ValidationError(detail={"error":f"أنت بالفعل في {settings.MAX_TEAMS} فرق نشطة."})
         
         # Create team and team member in a transaction
         with transaction.atomic():
@@ -92,15 +92,15 @@ class TeamService:
         ).first()
         
         if not team:
-            raise NotFound(detail="Team not found.")
+            raise NotFound(detail={"error": "الفريق غير موجود."})
         
         # Verify user is the captain
         if team.captain_id != captain_id:
-            raise PermissionDenied(detail="Only the team captain can deactivate the team.")
+            raise PermissionDenied(detail={"error": "فقط قائد الفريق يمكنه إلغاء تنشيط الفريق."})
         
         # Check if team is already inactive
         if not team.is_active:
-            raise ValidationError(detail="Team is already inactive.")
+            raise ValidationError(detail={"error": "الفريق غير نشط بالفعل."})
         
         # Deactivate team
         with transaction.atomic():

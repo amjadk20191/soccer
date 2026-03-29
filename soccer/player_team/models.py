@@ -10,9 +10,9 @@ import uuid
 
 
 class MemberStatus(models.IntegerChoices):
-    ACTIVE = 1, _('Active')
-    OUT = 2, _('out')
-    INACTIVE = 3, _('Inactive')
+    ACTIVE = 1, _('نشط')
+    OUT = 2, _('مغادر')
+    INACTIVE = 3, _('غير نشط')
 
 
 class TeamImage(models.Model):

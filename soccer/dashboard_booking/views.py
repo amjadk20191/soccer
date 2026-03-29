@@ -146,7 +146,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         except ValueError as e:
             return Response(
                 {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
     
@@ -184,7 +184,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         if booking.status != BookingStatus.PENDING_MANAGER:
             return Response(
-                {'error': 'Only bookings with Pending_manager status can be converted to Pending_player'},
+                {'error': 'حصرا يمكن تحويل الحجوزات في حالة انتظار المدير إلى انتظار اللاعب.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -248,9 +248,9 @@ class BookingPriceAPIView(APIView):
                 
         except Exception as e:
             return Response({
-                'error': 'Failed to calculate price',
+                'error': 'لا يمكن حساب السعر. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى.',
                 'detail': str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BookingstatusAPIView(APIView):

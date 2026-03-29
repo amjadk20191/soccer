@@ -8,12 +8,12 @@ import uuid
 
 
 class ChallengeStatus(models.IntegerChoices):
-    PENDING_TEAM = 1, _('Pending-Team')
-    PENDING_OWNER = 2, _('Pending-Owner')
-    PENDING_PAY = 3, _('Pending-Pay')
-    ACCEPTED = 4, _('Accepted')
-    REJECTED = 5, _('Rejected')
-    CANCELED = 6, _('Canceled')
+    PENDING_TEAM = 1, _('بانتظار الفريق')   # waiting for challenged team to accept/reject
+    PENDING_OWNER = 2, _('بانتظار المالك')
+    PENDING_PAY = 3, _('بانتظار الدفع')
+    ACCEPTED = 4, _('مقبول')
+    REJECTED = 5, _('مرفوض')
+    CANCELED = 6, _('ملغى')
 
 
 class Challenge(models.Model):

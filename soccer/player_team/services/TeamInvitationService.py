@@ -50,8 +50,7 @@ class TeamInvitationService:
         
         if current_count >= max_members:
             raise ValidationError(
-                detail=f"Team has reached the maximum limit of {max_members} members. "
-                       f"Current members: {current_count}"
+                detail={"error": f"الفريق قد وصل إلى الحد الأقصى لعدد الأعضاء ({max_members}). لا يمكن إضافة المزيد. عدد الأعضاء الحالي: {current_count}"}
             )
         
         return True, current_count, max_members
@@ -81,16 +80,16 @@ class TeamInvitationService:
         ).first()
         
         if not team:
-            raise NotFound(detail="Team not found or is inactive.")
+            raise NotFound(detail={"error": "الفريق غير موجود أو غير نشط."})
         
         if team.captain_id != captain_id:
-            raise PermissionDenied(detail="Only the team captain can invite players.")
+            raise PermissionDenied(detail={"error": "فقط قائد الفريق يمكنه دعوة اللاعبين."})
         
         # Get player by username
         player = User.objects.only('id', 'username').filter(username=username, role=1).first()
         
         if not player:
-            raise NotFound(detail=f"Player with username '{username}' not found.")
+            raise NotFound(detail={"error": f"اللاعب مع اسم المستخدم '{username}' غير موجود."})
         
         # Check if player is already a member
         existing_member = TeamMember.objects.filter(
@@ -100,7 +99,7 @@ class TeamInvitationService:
         ).exists()
         
         if existing_member:
-            raise ValidationError(detail="Player is already a member of this team.")
+            raise ValidationError(detail={"error": "اللاعب هو بالفعل عضو في هذا الفريق."})
         
         # Check if there's already a pending request
         existing_request = Request.objects.filter(
@@ -111,7 +110,7 @@ class TeamInvitationService:
         ).exists()
         
         if existing_request:
-            raise ValidationError(detail="A pending invitation already exists for this player.")
+            raise ValidationError(detail={"error": "تم إرسال دعوة لهذا اللاعب بالفعل."})
         
         # Check if team has reached maximum member limit
         cls._check_team_member_limit(team_id)
@@ -160,19 +159,19 @@ class TeamInvitationService:
         ).first()
         
         if not request:
-            raise NotFound(detail="Invitation request not found.")
+            raise NotFound(detail={"error": "الدعوة غير موجودة."})
         
         # Verify the request is for this player
         if request.player_id != player_id:
-            raise PermissionDenied(detail="This invitation is not for you.")
+            raise PermissionDenied(detail={"error": "هذه الدعوة ليست موجودة."})
         
         # Check if request is already processed
         if request.status != RequestStatus.PENDING:
-            raise ValidationError(detail="This invitation has already been processed.")
+            raise ValidationError(detail={"error": "الدعوة قد تم الرد عليها بالفعل."})
         
         # Check if team is still active
         if not request.team.is_active:
-            raise ValidationError(detail="The team is no longer active.")
+            raise ValidationError(detail={"error": "الفريق لم يعد نشط."})
         
         with transaction.atomic():
             if accept:
@@ -184,7 +183,7 @@ class TeamInvitationService:
                 ).exists()
                 
                 if existing_member:
-                    raise ValidationError(detail="You are already a member of this team.")
+                    raise ValidationError(detail={"error": "أنت بالفعل عضو في هذا الفريق."})
                 
                 # Check if team has reached maximum member limit before accepting
                 cls._check_team_member_limit(request.team_id)
@@ -195,7 +194,7 @@ class TeamInvitationService:
                 ).count()
         
                 if existing_team >= settings.MAX_TEAMS:
-                    raise ValidationError(detail="You are already in 5 active team.")
+                    raise ValidationError(detail={"error":f"أنت بالفعل في {settings.MAX_TEAMS} فرق نشطة."})
                         # Create team membership
                 team_member = TeamMember.objects.create(
                     team_id=request.team_id,
@@ -368,19 +367,19 @@ class TeamInvitationService:
         ).first()
         
         if not team:
-            raise NotFound(detail="Team not found or is inactive.")
+            raise NotFound(detail={"error": "الفريق غير موجود أو غير نشط."})
         
         # Determine which player to remove
         if player_id_to_remove:
             # Captain removing a player
             if team.captain_id != user_id:
-                raise PermissionDenied(detail="Only the team captain can remove players.")
+                raise PermissionDenied(detail={"error": "فقط قائد الفريق يمكنه إزالة اللاعبين."})
             
             target_player_id = player_id_to_remove
             
             # Prevent captain from removing themselves
             if target_player_id == user_id:
-                raise ValidationError(detail="Captain cannot remove themselves from the team.")
+                raise ValidationError(detail={"error": "القائد لا يمكنه إزالة نفسِه من الفريق."})
         else:
             # Player removing themselves
             target_player_id = user_id
@@ -405,7 +404,7 @@ class TeamInvitationService:
         )
 
         if not team_data['player_exists']:
-            raise NotFound(detail="Player is not an active member of this team.")
+            raise NotFound(detail={"error": "اللاعب ليس عضواً نشطاً في هذا الفريق."})
 
         # -1 because we're removing this player
         if team_data['active_count'] - 1 < settings.MIN_TEAM_MEMBERS_FOR_CHALLENGE:
@@ -449,7 +448,7 @@ class TeamInvitationService:
         ).first()
 
         if not team:
-            raise PermissionDenied(detail="Only the team captain can cancel invites.")
+            raise PermissionDenied(detail={"error": "فقط قائد الفريق يمكنه إلغاء الدعوات."})
 
 
         # 2) find the invite (must be an invite, not a recruitment post request)
@@ -461,11 +460,11 @@ class TeamInvitationService:
                             ).first()
 
         if not req:
-            raise NotFound(detail="Invite not found for this team.")
+            raise NotFound(detail={"error": "الدعوة غير موجودة لهذا الفريق."})
 
         # 3) only allow cancelling pending invites
         if req.status != RequestStatus.PENDING:
-            raise ValidationError(detail="Only pending invites can be cancelled.")
+            raise ValidationError(detail={"error": "حصرا الدعوات المعلقة يمكن إلغاؤها."})
 
         req.delete()
 

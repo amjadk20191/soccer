@@ -39,11 +39,11 @@ class CancelChallengeService:
 
         if challenge is None:
             # Same 404 for "not found" and "not your challenge" — avoids leaking.
-            raise NotFound("Challenge not found or you are not authorised to cancel it.")
+            raise NotFound(detail={"error": "التحدي غير موجود."})
 
         if challenge['status'] not in CancelChallengeService.CANCELABLE_STATUSES:
             raise ValidationError(
-                f"This challenge cannot be cancelled in its current state "
+                {"error": "لا يمكن إلغاء هذا التحدي لأنه في مرحلة متقدمة بالفعل."}
             )
 
         # ── Query 2: targeted UPDATE — no full model save ──────────────────

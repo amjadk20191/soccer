@@ -34,7 +34,7 @@ class GetSentChallengesService:
             is_active=True,
         ).exists():
             raise PermissionDenied(
-                "You are not the captain of this team or the team does not exist."
+                detail={"error": "أنت لست قائد هذا الفريق أو الفريق غير موجود."}
             )
 
         # ── Query 2: sent challenges ───────────────────────────────────────

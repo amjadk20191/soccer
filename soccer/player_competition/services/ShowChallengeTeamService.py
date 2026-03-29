@@ -11,7 +11,7 @@ class ShowChallengeTeamService:
         print(team_id, user_id)
         is_captain=Team.objects.filter(id=team_id, captain_id=user_id).exists()
         if not is_captain:
-            raise ValidationError("Only the team captain can see teams.")
+            raise ValidationError({"error": "حصرًا للقائد فقط."})
 
 
         # ✅ Single-level subquery instead of nested — one JOIN in SQL

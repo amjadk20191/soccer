@@ -177,6 +177,6 @@ class BookingPriceForUserAPIView(APIView):
                 
         except Exception as e:
             return Response({
-                'error': 'Failed to calculate price',
+                'error': 'فشل حساب السعر. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى.',
                 'detail': str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

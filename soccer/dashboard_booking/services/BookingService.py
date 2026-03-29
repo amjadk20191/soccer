@@ -32,14 +32,14 @@ class BookingService:
             case BookingStatus.COMPLETED.value:
                 cls.owner_completed_booking(booking)
             case _:
-                raise ValidationError("The status not valid")
+                raise ValidationError({"error": "الحالة غير صحيحة"})
 
     @classmethod
     @transaction.atomic
     def convert_to_pending_pay(cls, booking):
         """Convert Pending_manager to Pending_pay"""
         if booking.status != BookingStatus.PENDING_MANAGER:
-            raise  ValidationError("Only bookings with Pending_manager status can be converted to Pending_pay")
+            raise  ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن تحويلها إلى معلقة بانتظار الدفع "})
         
         cls._check_if_has_overlap_booking(booking)
         booking.status = BookingStatus.PENDING_PAY
@@ -51,7 +51,7 @@ class BookingService:
     def reject_booking(cls, booking):
         """Reject booking (from Pending_manager)"""
         if booking.status != BookingStatus.PENDING_MANAGER:
-            raise ValidationError("Only bookings with Pending_manager status can be rejected")
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن إلغاؤها"})
         
         booking.status = BookingStatus.REJECT
         booking.save(update_fields=['status', 'updated_at'])
@@ -64,7 +64,7 @@ class BookingService:
         if not(
             # booking.status == BookingStatus.COMPLETED or 
             (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
-            raise ValidationError("Only bookings with Completed or Pending_pay (created by owner) status can be rejected")
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (تم انشاءها من قبل صاحب الملعب) يمكن إلغاؤها"})
         
         booking.status = BookingStatus.DISPUTED
         booking.save(update_fields=['status', 'updated_at'])
@@ -75,7 +75,7 @@ class BookingService:
     def no_show_booking(cls, booking):
         """no_show booking (from Completed or Pending_pay)"""
         if not(booking.by_owner and booking.status == BookingStatus.PENDING_PAY):
-            raise ValidationError("Only bookings with Completed or Pending_pay status can be rejected")
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع  يمكن إلغاؤها"})
         
         booking.status = BookingStatus.NO_SHOW
         booking.save(update_fields=['status', 'updated_at'])
@@ -86,7 +86,7 @@ class BookingService:
     def owner_canceled_booking(cls, booking):
         """CANCELED booking (from Completed or Pending_pay) by owner"""
         if not(booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
-            raise ValidationError("Only bookings with Completed or Pending_pay (created by owner) or PENDING_PLAYER status can be rejected")
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (تم انشاءها من قبل صاحب الملعب) او بانتظار اللاعب يمكن إلغاؤها"})
         
         booking.status = BookingStatus.CANCELED
         booking.save(update_fields=['status', 'updated_at'])
@@ -97,8 +97,8 @@ class BookingService:
     def owner_completed_booking(cls, booking):
         """Completed booking (from Pending_pay) by owner"""
         if not(booking.by_owner and booking.status == BookingStatus.PENDING_PAY):
-            raise ValidationError("Only bookings with Completed or Pending_pay (created by owner) status can be rejected")
-        
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (تم انشاءها من قبل صاحب الملعب) يمكن إلغاؤها"})
+
         booking.status = BookingStatus.COMPLETED
         booking.save(update_fields=['status', 'updated_at'])
         return booking
@@ -108,10 +108,10 @@ class BookingService:
     def convert_to_pending_player(cls, booking, club_id, new_date, new_start_time, new_end_time):
         """Convert Pending_manager to Pending_player and create notification"""
         if booking.status != BookingStatus.PENDING_MANAGER:
-            raise ValidationError("Only bookings with Pending_manager status can be converted to Pending_player")
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن تحويلها إلى معلقة (من قبل اللاعب)"})
         
         if not booking.player:
-            raise ValidationError("Cannot send notification: booking has no player assigned")
+            raise ValidationError({"error": "لا يمكن ارسال اشعار لهذا الحجز بسبب عدم وجود لاعب مرتبط به."})
         
         cls._check_if_has_overlap_booking(booking)
         
@@ -145,7 +145,7 @@ class BookingService:
         ).exclude(pk=booking.pk).exists() 
         
         if has_overlap:
-            raise ValidationError("Cannot complete this booking: It overlaps with another confirmed booking.")
+            raise ValidationError({"error": "لا يمكن تأكيد هذا الحجز بسبب وجود حجز آخر يتداخل مع نفس الملعب في نفس الوقت."})
         
         equipments=BookingEquipment.objects.values('equipment_id','quantity').filter(booking_id=booking.id)
         if equipments:
@@ -172,7 +172,7 @@ class BookingService:
             print(":::::::::::::::::::::::::::::::::")
             print(equipment_ids)
             if len(club_equipments) != len(equipment_ids):  
-                raise ValidationError({"equipment": "equipment must be active"})
+                raise ValidationError({"error": "العدة يجب أن تكون نشطة."})
 
             for equipment in club_equipments:
                 print(equipment['quantity'])
@@ -181,7 +181,7 @@ class BookingService:
                 quantity = (equipment['quantity'] - old_booked_map.get(equipment['id'],0)) - new_booked_map.get(equipment['id'],0)
                 if quantity < 0:
                     raise ValidationError({
-                                        "equipment": f"equipment not available",
+                                        "error": f"الكمية المطلوبة غير متوفرة.",
                                         "id": equipment["id"],
                                         })
 
@@ -193,7 +193,7 @@ class BookingService:
     def player_canceled_booking(cls, booking):
         """CANCELED booking (from Completed or Pending_pay) by player"""
         if not(booking.status in [BookingStatus.COMPLETED, BookingStatus.PENDING_PAY]):
-            raise ValidationError("Only bookings with Completed or Pending_pay (created by player) status can be rejected")
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (من قبل اللاعب) يمكن إلغاؤها"})
         
         booking.status = BookingStatus.CANCELED
         booking.save(update_fields=['status', 'updated_at'])

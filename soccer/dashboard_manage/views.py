@@ -72,7 +72,7 @@ class ClubManagerView(APIView):
             false_days = [int(day) for day, is_active in working_days.items() if is_active is False]
             day_off = ClubPricing.objects.filter(club_id=club.id, day_of_week__in=false_days).exists()
             if day_off:
-                return Response({"error":"can not make the updated day off because there is ClubPricing active "}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error":"لا يمكن ايقاف العمل في هذا اليوم لأن هناك عرض مفعل."}, status=status.HTTP_400_BAD_REQUEST)
 
         
         serializer = ClubManagerSerializer(club, data=request.data, partial=True)
@@ -95,7 +95,7 @@ class _BasePricingViewSet(viewsets.ModelViewSet):
         try:
             return self.request.user.club 
         except AttributeError:
-            raise exceptions.PermissionDenied("User is not associated with a club.")
+            raise exceptions.PermissionDenied(detail={"error": "المستخدم ليس مرتبطاً بفريق."})
 
     def perform_create(self, serializer):
         serializer.save(club=self.get_club())
@@ -161,7 +161,7 @@ class PitchViewSet(viewsets.ModelViewSet):
             BookingStatus.COMPLETED
         ]).exists():
             return Response(
-                {"detail": "Cannot delete pitch with pending bookings."},
+                {"error": "لا يمكن حذف الملعب لأنه مرتبط بحجوزات نشطة أو مكتملة."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -184,7 +184,7 @@ class PitchViewSet(viewsets.ModelViewSet):
             )
            
             if not updated_count:
-                return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"error": "الملعب غير موجود."}, status=status.HTTP_404_NOT_FOUND)
 
             if not self.get_queryset().filter(is_active=True).exists():
                 club_id = self.request.auth.get('club_id')

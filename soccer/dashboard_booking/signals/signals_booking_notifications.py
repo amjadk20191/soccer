@@ -5,7 +5,7 @@ from core.models import Notification
 from dashboard_booking.models import BookingNotification
 from core.models import User
 from dashboard_manage.models import Club
-
+from rest_framework.exceptions import APIException
 
 @receiver(post_save, sender=BookingNotification, dispatch_uid="booking_notification_created_signal")
 def booking_notification_created(sender, instance, created, **kwargs):
@@ -14,7 +14,7 @@ def booking_notification_created(sender, instance, created, **kwargs):
         try:
             club = Club.objects.filter(id=instance.send_by_id).values("name", "manager_id").first()
             if not club:
-                raise ValidationError({"detail": "Associated club not found."})
+                raise ValidationError({"error": "النادي غير موجود."})
             
             notification_message = (
             f"نادي: {club['name']}\n"
@@ -34,7 +34,7 @@ def booking_notification_created(sender, instance, created, **kwargs):
             )
 
         except Exception as e:
-            raise ValidationError({"detail": f"Error creating notification a : {str(e)}"})
+            raise APIException(detail={"detail": f"Error creating notification a : {str(e)}"})
    
     else:
         return

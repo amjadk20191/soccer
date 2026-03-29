@@ -10,22 +10,22 @@ import uuid
 
 
 class BookingStatus(models.IntegerChoices):
-    PENDING_MANAGER = 1, _('Pending manager approval')
-    PENDING_PLAYER = 2, _('Pending player confirmation')
-    PENDING_PAY = 3, _('Pending_pay')
-    COMPLETED = 4, _('Completed')
-    CANCELED = 5, _('Canceled')
-    REJECT = 6, _('REJECT')
-    NO_SHOW = 7, _('No-Show')
-    DISPUTED = 8, _('Disputed')
-    EXPIRED = 9, _('Expired')
+    PENDING_MANAGER = 1, _('بانتظار تاكيد المدير')
+    PENDING_PLAYER = 2, _('بانتظار تاكيد اللاعب')
+    PENDING_PAY = 3, _('بانتظار الدفع')
+    COMPLETED = 4, _('مكتمل')
+    CANCELED = 5, _('ملغى')
+    REJECT = 6, _('مرفوض')
+    NO_SHOW = 7, _('لم يحضر')
+    DISPUTED = 8, _('مشكلة')
+    EXPIRED = 9, _('انتهت صلاحيته')
 
 class PayStatus(models.IntegerChoices):
-    LATER = 1, _('Later')
-    DEPOSIT = 2, _('Deposit')
-    ONLINE = 3, _('Online')
-    CASH = 4, _('Cash')
-    UNKNOWN = 5, _('Unknown')
+    LATER = 1, _('لاحقا')
+    DEPOSIT = 2, _('دفعة مقدمة')
+    ONLINE = 3, _('اونلاين')
+    CASH = 4, _('نقدا')
+    UNKNOWN = 5, _('غير معروف')
 
 
 

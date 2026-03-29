@@ -20,8 +20,8 @@ def review_created(sender, instance, created, **kwargs):
             club.save(update_fields=["rating_count", "rating_avg"])
 
         except Club.DoesNotExist:
-            raise ValidationError({"detail": "Associated club not found."})
+            raise ValidationError({"error": "النادي غير موجود."})
         except Exception as e:
-            raise ValidationError({"detail": f"Error updating club rating: {str(e)}"})
+            raise ValidationError({"error": f"خطأ في تحديث تقييم النادي: {str(e)}"})
     else:
         return

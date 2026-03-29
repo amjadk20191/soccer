@@ -37,7 +37,7 @@ class UserLoginAPIView(APIView):
 
         if user.role != 1:
             return Response(
-                {"error": "Access denied. This login is restricted to player."},
+                {"error": "وصول غير مصرح به. هذا الحساب لا يملك صلاحيات الدخول."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -61,7 +61,7 @@ class ManagerLoginAPIView(APIView):
 
         if user.role != 2:
             return Response(
-                {"error": "Access denied."},
+                {"error": "الوصول مرفوض."},
                 status=status.HTTP_403_FORBIDDEN
             )
 

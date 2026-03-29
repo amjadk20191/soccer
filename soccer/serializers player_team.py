@@ -16,7 +16,7 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='player.full_name', read_only=True)
     username = serializers.CharField(source='player.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-
+    
     class Meta:
         model = TeamMember
         fields = [
@@ -43,10 +43,11 @@ class UserTeamListSerializer(serializers.ModelSerializer):
     clean_sheet = serializers.FloatField(source='team.clean_sheet', read_only=True)
     goals_scored = serializers.FloatField(source='team.goals_scored', read_only=True)
 
+    
     class Meta:
         model = TeamMember
         fields = ['team_id', 'team_name', 'team_logo', 'is_captain', 'challenge_mode', 'joined_at', 'win_rate', 'clean_sheet', 'goals_scored']
-
+    
     def get_team_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
         if obj.team.logo.logo:
@@ -67,7 +68,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = Team
         fields = [
@@ -91,7 +92,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
             'members_count',
             'created_at',
         ]
-
+    
     def get_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
         if obj.logo.logo:
@@ -102,6 +103,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(logo.url)
             return logo.url
         return None
+    
 
     def get_members(self, obj):
         """Get all team members with ACTIVE or INACTIVE status (exclude OUT status)"""
@@ -115,7 +117,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
                 status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE]  # Only ACTIVE or INACTIVE
             ).select_related('player').order_by('-is_captain', 'joined_at')
         return TeamMemberSerializer(members, many=True).data
-
+    
     def get_members_count(self, obj):
         """Get total number of team members with ACTIVE or INACTIVE status"""
         # Use prefetched data if available (already filtered to ACTIVE/INACTIVE)
@@ -131,17 +133,8 @@ class InvitePlayerSerializer(serializers.Serializer):
     """
     Serializer for captain to invite a player to team.
     """
-    username = serializers.CharField(
-        required=True,
-        help_text="Username of the player to invite",
-        error_messages={
-            'required':   'هذا الحقل مطلوب.',
-            'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
-            'null':       'لا يمكن أن تكون هذه القيمة فارغة.',
-            'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
-        }
-    )
-
+    username = serializers.CharField(required=True, help_text="Username of the player to invite")
+    
     def validate_username(self, value):
         """Validate username is not empty"""
         if not value or not value.strip():
@@ -153,24 +146,8 @@ class InvitationResponseSerializer(serializers.Serializer):
     """
     Serializer for invitation request response.
     """
-    request_id = serializers.UUIDField(
-        required=True,
-        help_text="UUID of the invitation request",
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    accept = serializers.BooleanField(
-        required=True,
-        help_text="True to accept, False to reject",
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل قيمة صحيحة (صح/خطأ).',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
+    request_id = serializers.UUIDField(required=True, help_text="UUID of the invitation request")
+    accept = serializers.BooleanField(required=True, help_text="True to accept, False to reject")
 
 
 class InvitationRequestSerializer(serializers.ModelSerializer):
@@ -184,7 +161,7 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     recruitment_post_type = serializers.CharField(source='recruitment_post.get_type_display', read_only=True, allow_null=True)
     recruitment_post_description = serializers.CharField(source='recruitment_post.description', read_only=True, allow_null=True)
-
+    
     class Meta:
         model = Request
         fields = [
@@ -199,7 +176,7 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['id', 'status', 'created_at']
-
+    
     def get_team_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
         if obj.team and obj.team.logo and obj.team.logo.logo:
@@ -208,7 +185,7 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.team.logo.logo.url)
             return obj.team.logo.logo.url
         return None
-
+    
 class ShowTeamInvitationSendSerializer(serializers.ModelSerializer):
     player_username = serializers.CharField(source='player.username', read_only=True)
     player_full_name = serializers.CharField(source='player.full_name', read_only=True)
@@ -216,7 +193,7 @@ class ShowTeamInvitationSendSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     recruitment_post_type = serializers.CharField(source='recruitment_post.get_type_display', read_only=True, allow_null=True)
     recruitment_post_description = serializers.CharField(source='recruitment_post.description', read_only=True, allow_null=True)
-
+    
     class Meta:
         model = Request
         fields = [
@@ -231,7 +208,7 @@ class ShowTeamInvitationSendSerializer(serializers.ModelSerializer):
             'recruitment_post_description'
         ]
         read_only_fields = ['id', 'status', 'created_at']
-
+    
     def get_team_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
         if obj.team and obj.team.logo and obj.team.logo.logo:
@@ -246,17 +223,8 @@ class UserSearchSerializer(serializers.Serializer):
     """
     Serializer for user search filter.
     """
-    username = serializers.CharField(
-        required=True,
-        help_text="Username filter to search for users",
-        error_messages={
-            'required':   'هذا الحقل مطلوب.',
-            'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
-            'null':       'لا يمكن أن تكون هذه القيمة فارغة.',
-            'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
-        }
-    )
-
+    username = serializers.CharField(required=True, help_text="Username filter to search for users")
+    
     def validate_username(self, value):
         """Validate username filter is not empty"""
         if not value or not value.strip():
@@ -277,15 +245,7 @@ class RemovePlayerSerializer(serializers.Serializer):
     """
     Serializer for captain to remove a player from team.
     """
-    player_id = serializers.UUIDField(
-        required=True,
-        help_text="UUID of the player to remove from team",
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
+    player_id = serializers.UUIDField(required=True, help_text="UUID of the player to remove from team")
 
 
 class TeamCreateSerializer(serializers.ModelSerializer):
@@ -300,36 +260,6 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                 'logo',
                 'time',
                 'address']
-        extra_kwargs = {
-            'name': {
-                'error_messages': {
-                    'required':   'هذا الحقل مطلوب.',
-                    'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
-                    'null':       'لا يمكن أن تكون هذه القيمة فارغة.',
-                    'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
-                }
-            },
-            'logo': {
-                'error_messages': {
-                    'invalid_image': 'أدخل صورة صحيحة.',
-                    'empty':         'لا يجوز تقديم ملف فارغ.',
-                    'no_name':       'يجب أن يحتوي الملف المُقدَّم على اسم.',
-                }
-            },
-            'time': {
-                'error_messages': {
-                    'invalid': 'أدخل وقتاً صحيحاً.',
-                    'null':    'لا يمكن أن تكون هذه القيمة فارغة.',
-                }
-            },
-            'address': {
-                'error_messages': {
-                    'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
-                    'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
-                }
-            },
-        }
-
     def validate_name(self, value):
         """Validate team name is not empty"""
         if not value or not value.strip():
@@ -350,41 +280,6 @@ class TeamUpdateSerializer(serializers.ModelSerializer):
                 'time',
                 'address',
                 'challenge_mode']
-        extra_kwargs = {
-            'name': {
-                'error_messages': {
-                    'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
-                    'null':       'لا يمكن أن تكون هذه القيمة فارغة.',
-                    'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
-                }
-            },
-            'logo': {
-                'error_messages': {
-                    'invalid_image': 'أدخل صورة صحيحة.',
-                    'empty':         'لا يجوز تقديم ملف فارغ.',
-                    'no_name':       'يجب أن يحتوي الملف المُقدَّم على اسم.',
-                }
-            },
-            'time': {
-                'error_messages': {
-                    'invalid': 'أدخل وقتاً صحيحاً.',
-                    'null':    'لا يمكن أن تكون هذه القيمة فارغة.',
-                }
-            },
-            'address': {
-                'error_messages': {
-                    'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
-                    'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
-                }
-            },
-            'challenge_mode': {
-                'error_messages': {
-                    'invalid': 'أدخل قيمة صحيحة (صح/خطأ).',
-                    'null':    'لا يمكن أن تكون هذه القيمة فارغة.',
-                }
-            },
-        }
-
     def validate_name(self, value):
         """Validate team name is not empty"""
         if not value or not value.strip():
@@ -397,7 +292,7 @@ class TeamResponseSerializer(serializers.ModelSerializer):
     """
     logo = serializers.SerializerMethodField()
     captain_id = serializers.UUIDField(source='captain.id', read_only=True)
-
+    
     class Meta:
         model = Team
         fields = [
@@ -413,7 +308,7 @@ class TeamResponseSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ['id', 'is_active', 'created_at', 'updated_at']
-
+    
     def get_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
         if obj.logo:
@@ -425,17 +320,5 @@ class TeamResponseSerializer(serializers.ModelSerializer):
 
 
 class DeleteSendInviteSerializer(serializers.Serializer):
-    team_id = serializers.UUIDField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    invite_id = serializers.UUIDField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
+    team_id = serializers.UUIDField()
+    invite_id = serializers.UUIDField()

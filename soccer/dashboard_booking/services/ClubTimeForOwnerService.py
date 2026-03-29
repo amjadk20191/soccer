@@ -106,7 +106,7 @@ class ClubTimeForOwnerService:
         """
         club = Club.objects.values('open_time', 'close_time', 'working_days').filter(id=club_id).first()
         if not club:
-            raise ValidationError({"detail": "Club not found"})
+            raise ValidationError({"error": "النادي غير موجود."})
 
         return club['open_time'], club['close_time'], club['working_days']
 

@@ -7,55 +7,14 @@ from django.conf import settings
 
 
 class CreateChallengeSerializer(serializers.Serializer):
-    team_id = serializers.UUIDField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    challenged_team_id = serializers.UUIDField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    pitch_id = serializers.UUIDField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    club_id = serializers.UUIDField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل معرّف UUID صحيح.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    start_time = serializers.TimeField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل وقتاً صحيحاً.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    end_time = serializers.TimeField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل وقتاً صحيحاً.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
-    date = serializers.DateField(
-        error_messages={
-            'required': 'هذا الحقل مطلوب.',
-            'invalid':  'أدخل تاريخاً صحيحاً.',
-            'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
+    team_id           = serializers.UUIDField()
+    challenged_team_id = serializers.UUIDField()
+    pitch_id          = serializers.UUIDField()
+    club_id           = serializers.UUIDField()
+    start_time        = serializers.TimeField()
+    end_time          = serializers.TimeField()
+    date              = serializers.DateField()
+
 
     def validate_date(self, value):
         today = date.today()
@@ -96,6 +55,9 @@ class ShowChallengeTeamsSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.logo.logo.url)
         except (AttributeError, ValueError):
             return None
+        
+
+
 
 
 # ── Output ─────────────────────────────────────────────────────────────────────
@@ -116,6 +78,7 @@ class TeamBriefSerializer(serializers.Serializer):
         if not image_field:
             return None
         return request.build_absolute_uri(image_field.url) if request else image_field.url
+    
 
 
 class PitchBriefSerializer(serializers.Serializer):
@@ -143,6 +106,7 @@ class PendingChallengeSerializer(serializers.ModelSerializer):
             "date",
             "start_time",
             "end_time",
+
         ]
 
 
@@ -161,6 +125,7 @@ class RequestedChallengeSerializer(serializers.ModelSerializer):
             "date",
             "start_time",
             "end_time",
+
         ]
 
 # ── Input ──────────────────────────────────────────────────────────────────────
@@ -172,11 +137,4 @@ class ChallengeReplySerializer(serializers.Serializer):
     ACCEPT = "accept"
     REJECT = "reject"
 
-    action = serializers.ChoiceField(
-        choices=[ACCEPT, REJECT],
-        error_messages={
-            'required':       'هذا الحقل مطلوب.',
-            'invalid_choice': 'القيمة "{input}" غير صحيحة. الخيارات المتاحة: accept, reject.',
-            'null':           'لا يمكن أن تكون هذه القيمة فارغة.',
-        }
-    )
+    action = serializers.ChoiceField(choices=[ACCEPT, REJECT])

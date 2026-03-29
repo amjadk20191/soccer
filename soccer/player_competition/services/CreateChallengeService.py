@@ -44,7 +44,7 @@ class CreateChallengeService:
 
         # Captain guard — no DB hit, uses the already-fetched captain_id
         if team.captain_id != requesting_user_id:
-            raise ValidationError("Only the team captain can send a challenge.")
+            raise ValidationError({"error": "حصرًا للقائد فقط."})
 
         # ── Query 2: confirm pitch belongs to the club and both are active ──
         if not Pitch.objects.filter(
@@ -55,7 +55,7 @@ class CreateChallengeService:
             is_deteted=False,          # keeping original spelling
         ).exists():
             raise ValidationError(
-                "Club or pitch is invalid, inactive, or the pitch does not belong to this club."
+                {"error": "النادي أو الملعب غير موجود أو غير نشط."}
             )
 
         # Everything below can race; lock it all inside one transaction.
@@ -88,7 +88,7 @@ class CreateChallengeService:
 
             if conflict:
                 raise ValidationError(
-                    "One or more players in these teams already have a challenge in this time slot."
+                    {"error": "لا يمكن إنشاء التحدي بسبب تعارض في جدول الحجز لأحد أعضاء الفريقين."}
                 )
 
             # ── Query 4: pitch booking conflict ────────────────────────────
@@ -102,7 +102,7 @@ class CreateChallengeService:
 
             if overlapping:
                 raise ValidationError(
-                    "This pitch already has a booking in the requested time slot."
+                    {"error": "هدا الملعب غير متاح في هذا الوقت بسبب حجز موجود بالفعل."}
                 )
 
             # ── Query 5: write ─────────────────────────────────────────────
@@ -123,10 +123,10 @@ class CreateChallengeService:
         team = teams_bulk.get(team_id)
         if not team:
             raise ValidationError(
-                f"{label} does not exist, is inactive, or has challenge mode disabled."
+                {"error": f"{label} غير موجود أو غير مؤهل للتحدي."}
             )
         if team.active_member_count < settings.MIN_TEAM_MEMBERS:
             raise ValidationError(
-                f"{label} must have at least {settings.MIN_TEAM_MEMBERS} active members."
+                {"error": f"{label} يجب أن يكون لديه {settings.MIN_TEAM_MEMBERS} أعضاء نشطين على الأقل."}
             )
         return team

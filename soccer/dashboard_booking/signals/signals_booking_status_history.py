@@ -3,7 +3,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from player_booking.models import Booking
 from dashboard_booking.models import BookingStatusHistory
-
+from rest_framework.exceptions import APIException
 
 @receiver(post_save, sender=Booking, dispatch_uid="bookin_status_history_update_signal")
 def bookin_status_history_created(sender, instance, created, **kwargs):
@@ -21,7 +21,6 @@ def bookin_status_history_created(sender, instance, created, **kwargs):
                                                 )
 
         except Exception as e:
-            raise ValidationError({"detail": f"Error creating BookingStatusHistory a : {str(e)}"})
-
+            raise APIException(detail={"detail": f"Error creating BookingStatusHistory: {str(e)}"})
 
     

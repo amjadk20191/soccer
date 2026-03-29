@@ -44,7 +44,7 @@ class ReplyChallengeService:
         if challenge is None:
             # Distinguish "not found" from "wrong person" — both return 404
             # to avoid leaking challenge existence to non-members.
-            raise NotFound("Challenge not found or you are not authorised to reply.")
+            raise NotFound(detail={"error": "التحدي غير موجود."})
 
         if action == ReplyChallengeService.REJECT:
             return ReplyChallengeService._reject(challenge)
@@ -52,7 +52,7 @@ class ReplyChallengeService:
         if action == ReplyChallengeService.ACCEPT:
             return ReplyChallengeService._accept(challenge)
 
-        raise ValidationError(f"Unknown action '{action}'.")   # defensive; serializer already validates
+        raise ValidationError({"error": f"Unknown action '{action}'."})   # defensive; serializer already validates
 
     # ── Private helpers ────────────────────────────────────────────────────
 
@@ -106,7 +106,7 @@ class ReplyChallengeService:
 
             if conflict:
                 raise ValidationError(
-                    "One or more players in these teams already have a challenge in this time slot."
+                    {"error": "لا يمكن قبول التحدي بسبب تعارض في جدول الحجز لأحد أعضاء الفريقين."}
                 )
 
             # ── Query 4: update challenge status ──────────────────────────
