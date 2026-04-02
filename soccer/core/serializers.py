@@ -1,7 +1,38 @@
+import re
+
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User
 
+from .validators import validate_phone_format
+
+
+class CheckAvailabilityInputSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        max_length=150,
+        trim_whitespace=True,
+        error_messages={
+            'required': 'اسم المستخدم مطلوب.',
+            'blank': 'اسم المستخدم لا يمكن أن يكون فارغاً.',
+            'max_length': 'اسم المستخدم يجب أن لا يتجاوز 150 حرفاً.',
+        }
+    )
+    phone = serializers.CharField(
+        max_length=10,
+        trim_whitespace=True,
+        error_messages={
+            'required': 'رقم الهاتف مطلوب.',
+            'blank': 'رقم الهاتف لا يمكن أن يكون فارغاً.',
+            'max_length': 'رقم الهاتف يجب أن لا يتجاوز 10 أرقام.',
+        }
+    )
+
+    def validate_phone(self, value):
+        validate_phone_format(value)
+        return value
+
+
+    
 class UserRegistrationSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(

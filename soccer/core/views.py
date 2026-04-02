@@ -5,7 +5,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserRegistrationSerializer, LoginSerializer
 from core.services.service_authentication import MyTokenObtainPairSerializer
-
+from .serializers import CheckAvailabilityInputSerializer, CheckAvailabilityOutputSerializer
+from .services.validateusername_phone import check_field_availability
 
 
 class RegisterUserAPIView(generics.CreateAPIView):
@@ -25,6 +26,20 @@ class RegisterUserAPIView(generics.CreateAPIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }, status=status.HTTP_201_CREATED)
+
+
+class CheckAvailabilityView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        input_serializer = CheckAvailabilityInputSerializer(data=request.query_params)
+        input_serializer.is_valid(raise_exception=True)
+
+        data = input_serializer.validated_data
+        result = check_field_availability(data['username'], data['phone'])
+
+        
+        return Response(result)
 
 
 class UserLoginAPIView(APIView):
