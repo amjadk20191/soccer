@@ -1,0 +1,2557 @@
+{
+  "info": {
+    "_postman_id": "26527009-400b-4678-8343-1cdab583d5dd",
+    "name": "soccer",
+    "description": "This template contains a boilerplate for documentation that you can quickly customize and reuse.\n\n### How to use this template:\n\n- Replace the content given brackets (()) with your API's details.\n- Tips are formatted in `codespan` - feel free to read and remove them.\n    \n\n---\n\n`Start with a brief overview of what your API offers.`\n\nThe ((product name)) provides many API products, tools, and resources that enable you to ((add product value here)).\n\n`You can also list the APIs you offer, link to the relevant pages, or do both in this section.`\n\n## **Getting started guide**\n\n`List the steps or points required to start using your APIs. Make sure to cover everything required to reach success with your API as quickly as possible.`\n\nTo start using the ((add APIs here)), you need to -\n\n`The points given below are from The Postman API's documentation. You can reference it to write your own getting started guide.`\n\n- You must use a valid API Key to send requests to the API endpoints. You can get your API key from Postman's [integrations dashboard](https://go.postman.co/settings/me/api-keys).\n- The API has [rate and usage limits](https://learning.postman.com/docs/developer/postman-api/postman-api-rate-limits/).\n- The API only responds to HTTPS-secured communications. Any requests sent via HTTP return an HTTP 301 redirect to the corresponding HTTPS resources.\n- The API returns request responses in JSON format. When an API request returns an error, it is sent in the JSON response as an error key.\n    \n\n## Authentication\n\n`Add details on the authorization keys/tokens required, steps that cover how to get them, and the relevant error codes.`\n\nThe ((product name)) API uses ((add your API's authorization type)) for authentication.\n\n`The details given below are from the Postman API's documentation. You can reference it to write your own authentication section.`\n\nPostman uses API keys for authentication. You can generate a Postman API key in the [API keys](https://postman.postman.co/settings/me/api-keys) section of your Postman account settings.\n\nYou must include an API key in each request to the Postman API with the X-Api-Key request header.\n\n### Authentication error response\n\nIf an API key is missing, malformed, or invalid, you will receive an HTTP 401 Unauthorized response code.\n\n## Rate and usage limits\n\n`Use this section to cover your APIs' terms of use. Include API limits, constraints, and relevant error codes, so consumers understand the permitted API usage and practices.`\n\n`The example given below is from The Postman API's documentation. Use it as a reference to write your APIs' terms of use.`\n\nAPI access rate limits apply at a per-API key basis in unit time. The limit is 300 requests per minute. Also, depending on your plan, you may have usage limits. If you exceed either limit, your request will return an HTTP 429 Too Many Requests status code.\n\nEach API response returns the following set of headers to help you identify your use status:\n\n| Header | Description |\n| --- | --- |\n| `X-RateLimit-Limit` | The maximum number of requests that the consumer is permitted to make per minute. |\n| `X-RateLimit-Remaining` | The number of requests remaining in the current rate limit window. |\n| `X-RateLimit-Reset` | The time at which the current rate limit window resets in UTC epoch seconds. |\n\n### 503 response\n\nAn HTTP `503` response from our servers indicates there is an unexpected spike in API access traffic. The server is usually operational within the next five minutes. If the outage persists or you receive any other form of an HTTP `5XX` error, [contact support](https://support.postman.com/hc/en-us/requests/new/).\n\n### **Need some help?**\n\n`Add links that customers can refer to whenever they need help.`\n\nIn case you have questions, go through our tutorials ((link to your video or help documentation here)). Or visit our FAQ page ((link to the relevant page)).\n\nOr you can check out our community forum, there’s a good chance our community has an answer for you. Visit our developer forum ((link to developer forum)) to review topics, ask questions, and learn from others.\n\n`You can also document or add links to libraries, code examples, and other resources needed to make a request.`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "26485658"
+  },
+  "item": [
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "team",
+          "item": [
+            {
+              "name": "invite",
+              "item": [
+                {
+                  "name": "send invite to user",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"username\": \"admin000\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/invite/a38d2d7f-e672-4692-907f-7cd0cdff3059/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "invite",
+                        "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "true/false invite",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "            {\r\n                \"request_id\": \"105b9d16-02e0-42d6-a664-6052cd9d6ed5\",\r\n                \"accept\": false\r\n            }",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/invitation/respond/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "invitation",
+                        "respond",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "search for users to invite",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": ""
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/search-users/a38d2d7f-e672-4692-907f-7cd0cdff3059/?username=جوكر",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "search-users",
+                        "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "username",
+                          "value": "جوكر"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "show invites",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": ""
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/my-invitations/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "my-invitations",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "show invites send by team",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": ""
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/team-send-invitations/a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "team-send-invitations",
+                        "a38d2d7f-e672-4692-907f-7cd0cdff3059"
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "delete send invite",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/delete-send-invite/a38d2d7f-e672-4692-907f-7cd0cdff3059/823e0add-f5fe-44f6-bdf2-e2ed8bb5f63f/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "delete-send-invite",
+                        "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                        "823e0add-f5fe-44f6-bdf2-e2ed8bb5f63f",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "leave-team",
+              "item": [
+                {
+                  "name": "leave-team",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/leave-team/a38d2d7f-e672-4692-907f-7cd0cdff3059/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "leave-team",
+                        "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "remove-player",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"player_id\": \"f59a4248-10f1-49b9-94a5-13d08056e234\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/remove-player/a38d2d7f-e672-4692-907f-7cd0cdff3059/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "remove-player",
+                        "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "manage",
+              "item": [
+                {
+                  "name": "create team",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "name",
+                          "value": "new5",
+                          "type": "text",
+                          "uuid": "b1d1a7b9-28fa-4c37-89a9-0a1b3a6aaa55"
+                        },
+                        {
+                          "key": "logo",
+                          "type": "text",
+                          "uuid": "58bed254-8658-4511-a842-6c5b1b68c902",
+                          "value": "adea6943-beb1-4faf-a1e6-6bf4ba48d107"
+                        },
+                        {
+                          "key": "time",
+                          "value": "daily ",
+                          "type": "text",
+                          "uuid": "02e78dd4-df77-424b-af1e-b5784de9b71b"
+                        },
+                        {
+                          "key": "address",
+                          "value": "wherever ",
+                          "type": "text",
+                          "uuid": "1bd980cc-aee1-4d98-8d59-5ecf9a82b191"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/create/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "create",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "update team",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "name",
+                          "value": "new9",
+                          "type": "text",
+                          "uuid": "b1d1a7b9-28fa-4c37-89a9-0a1b3a6aaa55",
+                          "disabled": true
+                        },
+                        {
+                          "key": "logo",
+                          "type": "text",
+                          "uuid": "58bed254-8658-4511-a842-6c5b1b68c902",
+                          "value": "02bd02c5-ce6a-4a97-b5e6-57552afd6154"
+                        },
+                        {
+                          "key": "time",
+                          "value": "daily ",
+                          "type": "text",
+                          "uuid": "02e78dd4-df77-424b-af1e-b5784de9b71b",
+                          "disabled": true
+                        },
+                        {
+                          "key": "address",
+                          "value": "wherever ",
+                          "type": "text",
+                          "uuid": "1bd980cc-aee1-4d98-8d59-5ecf9a82b191",
+                          "disabled": true
+                        },
+                        {
+                          "key": "challenge_mode",
+                          "value": "true",
+                          "type": "text",
+                          "uuid": "6a1ea06a-fab2-4da4-9d12-2a400e6baa67",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/update/f3753e6c-b369-4f11-9d42-ef3bb043f5a8/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "update",
+                        "f3753e6c-b369-4f11-9d42-ef3bb043f5a8",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "delete team",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/delete/7f9b1e8e-20fe-4370-9fae-e190d6d3126d/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "delete",
+                        "7f9b1e8e-20fe-4370-9fae-e190d6d3126d",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "show team images",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/player/team/team-images/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "player",
+                        "team",
+                        "team-images",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "user teams",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"phone\": \"0999999996\",\r\n    \"password\": \"AmjadK0\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/team/my-teams/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "team",
+                    "my-teams",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "user team details",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"phone\": \"0999999996\",\r\n    \"password\": \"AmjadK0\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/team/details/a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "team",
+                    "details",
+                    "a38d2d7f-e672-4692-907f-7cd0cdff3059"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Booking",
+          "item": [
+            {
+              "name": "create booking",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"club\":  \"6e4a023a-97f3-437d-9209-ffb7f59700f7\",\r\n    \r\n    \"pitch\": \"7121e6cc-3c25-4bf0-90ce-d15b2d4b02a7\",\r\n    \"date\": \"2026-03-22\",\r\n    \"start_time\": \"12:00\",\r\n    \"end_time\": \"13:00\",\r\n    \"equipments\": [\r\n        {\r\n            \"id\": \"8f5c4d2f-f35e-4e3a-adab-28c2f1fcc822\",\r\n            \"quantity\": 1\r\n        }\r\n    \r\n\r\n   ]\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/booking/make-booking/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "booking",
+                    "make-booking",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "availabil-equipment",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/booking/availabil-equipment/?date=2026-05-29&start_time=07:00&end_time=19:00&club=6e4a023a-97f3-437d-9209-ffb7f59700f7",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "booking",
+                    "availabil-equipment",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-05-29"
+                    },
+                    {
+                      "key": "start_time",
+                      "value": "07:00"
+                    },
+                    {
+                      "key": "end_time",
+                      "value": "19:00"
+                    },
+                    {
+                      "key": "club",
+                      "value": "6e4a023a-97f3-437d-9209-ffb7f59700f7"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show booking-duration for Club",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/booking/booking-duration/6e4a023a-97f3-437d-9209-ffb7f59700f7/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "booking",
+                    "booking-duration",
+                    "6e4a023a-97f3-437d-9209-ffb7f59700f7",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show consolidated-booking",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/booking/consolidated-booking/?club=6e4a023a-97f3-437d-9209-ffb7f59700f7&pitch=c77abe78-4bc0-47d5-ac85-8e20fa809a39&date=2026-03-28",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "booking",
+                    "consolidated-booking",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "club",
+                      "value": "6e4a023a-97f3-437d-9209-ffb7f59700f7"
+                    },
+                    {
+                      "key": "pitch",
+                      "value": "c77abe78-4bc0-47d5-ac85-8e20fa809a39"
+                    },
+                    {
+                      "key": "date",
+                      "value": "2026-03-28"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "calculate-price",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"club\":\"6e4a023a-97f3-437d-9209-ffb7f59700f7\",\r\n    \"pitch\": \"038bf093-ddaa-451e-bb19-6cb75686799c\",\r\n    \"date\": \"2026-05-22\",\r\n    \"start_time\": \"12:55\",\r\n    \"end_time\": \"13:55\",\r\n    \"equipments\":[\r\n    {\r\n        \"id\":\"8f5c4d2f-f35e-4e3a-adab-28c2f1fcc822\",\r\n        \"quantity\":1\r\n    },\r\n    {\r\n        \"id\":\"c91f18f7-650d-4c22-af10-398fbcab1b25\",\r\n        \"quantity\":1\r\n    }\r\n\r\n   ]\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/booking/calculate-price/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "booking",
+                    "calculate-price",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "competition",
+          "item": [
+            {
+              "name": "show challenge team active",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/competition/teams/a38d2d7f-e672-4692-907f-7cd0cdff3059/challenges/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "competition",
+                    "teams",
+                    "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                    "challenges",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "create challenge",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"team_id\":\"a38d2d7f-e672-4692-907f-7cd0cdff3059\",\r\n    \"challenged_team_id\":\"7f9b1e8e-20fe-4370-9fae-e190d6d3126d\",\r\n    \"club_id\":  \"6e4a023a-97f3-437d-9209-ffb7f59700f7\",\r\n    \"pitch_id\": \"c77abe78-4bc0-47d5-ac85-8e20fa809a39\",\r\n    \"date\": \"2026-03-11\",\r\n    \"start_time\": \"15:55\",\r\n    \"end_time\": \"16:00\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/competition/create/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "competition",
+                    "create",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show requested challenges to team",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/competition/teams/7f9b1e8e-20fe-4370-9fae-e190d6d3126d/challenges/pending/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "competition",
+                    "teams",
+                    "7f9b1e8e-20fe-4370-9fae-e190d6d3126d",
+                    "challenges",
+                    "pending",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "reply to requested challenges",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "//    Body: { \"action\": \"accept\" | \"reject\" }\r\n{ \"action\": \"accept\" }\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/competition/challenges/b4705862-e68f-46fd-ae3e-d42d41278daf/reply/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "competition",
+                    "challenges",
+                    "b4705862-e68f-46fd-ae3e-d42d41278daf",
+                    "reply",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show requested challenges from team",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/competition/teams/a38d2d7f-e672-4692-907f-7cd0cdff3059/challenges/sent/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "competition",
+                    "teams",
+                    "a38d2d7f-e672-4692-907f-7cd0cdff3059",
+                    "challenges",
+                    "sent",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "cancel send challenge",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/player/competition/challenges/25175c54-68d5-4536-a5d5-2e799291052a/cancel/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "player",
+                    "competition",
+                    "challenges",
+                    "25175c54-68d5-4536-a5d5-2e799291052a",
+                    "cancel",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "show clubs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BaseURL}}/api/player/booking/clubs/",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "player",
+                "booking",
+                "clubs",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "show club detail (pitches price and opening time)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BaseURL}}/api/player/booking/club-opening-prices?club_id=6e4a023a-97f3-437d-9209-ffb7f59700f7",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "player",
+                "booking",
+                "club-opening-prices"
+              ],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "6e4a023a-97f3-437d-9209-ffb7f59700f7"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "check UserName and PhoneNumber",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BaseURL}}/api/check/?username=omar99&phone=0912345678",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "check",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "username",
+                  "value": "omar99"
+                },
+                {
+                  "key": "phone",
+                  "value": "0912345678"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "The `/me` endpoints let you manage information about the authenticated user.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Owner",
+      "item": [
+        {
+          "name": "pitches",
+          "item": [
+            {
+              "name": "CRUD",
+              "item": [
+                {
+                  "name": "show pitches",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "const response = pm.response.json();\r",
+                          "\r",
+                          "pm.environment.set(\"pich_id\", response[0].id);\r",
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pitches/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pitches",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Create pitches",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "name",
+                          "value": "ملعب الجواني",
+                          "type": "text",
+                          "uuid": "253077b8-d004-49b8-b3e7-4cca0a669d8f"
+                        },
+                        {
+                          "key": "image",
+                          "type": "file",
+                          "uuid": "fea1174a-20ba-4af7-a86f-764679116558",
+                          "src": "/C:/Users/MSI1/Pictures/download.jpg"
+                        },
+                        {
+                          "key": "type",
+                          "value": "طبيعي",
+                          "type": "text",
+                          "uuid": "4d5f7803-1be6-4dfc-9c98-bd30ddd87305"
+                        },
+                        {
+                          "key": "size_high",
+                          "value": "10",
+                          "type": "text",
+                          "uuid": "326a078e-c966-429d-8635-ce4d0a730e1f"
+                        },
+                        {
+                          "key": "size_width",
+                          "value": "10",
+                          "type": "text",
+                          "uuid": "acb50102-0250-4cd4-b1f8-9fa769525ff9"
+                        },
+                        {
+                          "key": "price_first",
+                          "value": "5000",
+                          "type": "text",
+                          "uuid": "91f6a16d-d087-4277-8fa6-3ebff2bcdd41"
+                        },
+                        {
+                          "key": "price_second",
+                          "value": "6000",
+                          "type": "text",
+                          "uuid": "0641fd70-64d8-44ee-b391-7939366d0448"
+                        },
+                        {
+                          "key": "time_interval",
+                          "value": "10:10:10",
+                          "type": "text",
+                          "uuid": "6429d1a3-9cf1-426c-9641-515a996b1c72"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pitches/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pitches",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "Update pitch",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "name",
+                          "value": "ملعب الجواني",
+                          "type": "text",
+                          "uuid": "253077b8-d004-49b8-b3e7-4cca0a669d8f",
+                          "disabled": true
+                        },
+                        {
+                          "key": "image",
+                          "type": "file",
+                          "uuid": "fea1174a-20ba-4af7-a86f-764679116558",
+                          "src": "/C:/Users/MSI1/Pictures/download.jpg",
+                          "disabled": true
+                        },
+                        {
+                          "key": "type",
+                          "value": "صناعي",
+                          "type": "text",
+                          "uuid": "4d5f7803-1be6-4dfc-9c98-bd30ddd87305"
+                        },
+                        {
+                          "key": "size_high",
+                          "value": "10",
+                          "type": "text",
+                          "uuid": "326a078e-c966-429d-8635-ce4d0a730e1f",
+                          "disabled": true
+                        },
+                        {
+                          "key": "size_width",
+                          "value": "10",
+                          "type": "text",
+                          "uuid": "acb50102-0250-4cd4-b1f8-9fa769525ff9",
+                          "disabled": true
+                        },
+                        {
+                          "key": "price_first",
+                          "value": "5000",
+                          "type": "text",
+                          "uuid": "91f6a16d-d087-4277-8fa6-3ebff2bcdd41",
+                          "disabled": true
+                        },
+                        {
+                          "key": "price_second",
+                          "value": "6000",
+                          "type": "text",
+                          "uuid": "0641fd70-64d8-44ee-b391-7939366d0448",
+                          "disabled": true
+                        },
+                        {
+                          "key": "time_interval",
+                          "value": "10:10:10",
+                          "type": "text",
+                          "uuid": "6429d1a3-9cf1-426c-9641-515a996b1c72",
+                          "disabled": true
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pitches/{{pich_id}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pitches",
+                        "{{pich_id}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "show pitch details",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pitches/{{pich_id}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pitches",
+                        "{{pich_id}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "delete pitch",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pitches/{{pich_id}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pitches",
+                        "{{pich_id}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "get-pitch-types",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/get-pitch-types",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "get-pitch-types"
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "active & unactive pitch",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n\r\n    \"is_active\":false\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/pitches/{{pich_id}}/set-active/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "pitches",
+                    "{{pich_id}}",
+                    "set-active",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "club",
+          "item": [
+            {
+              "name": "update club",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "address",
+                      "value": "مزة استراد",
+                      "type": "text",
+                      "uuid": "fd9700cb-10e9-43bb-ad2d-8d88cb2c1671",
+                      "disabled": true
+                    },
+                    {
+                      "key": "open_time",
+                      "value": "10:00:00",
+                      "type": "text",
+                      "uuid": "63e9286e-1149-47a7-84e5-3c1c87465728"
+                    },
+                    {
+                      "key": "close_time",
+                      "value": "22:41:32",
+                      "type": "text",
+                      "uuid": "86ade88c-af5b-4f22-afbe-2fedd176037a"
+                    },
+                    {
+                      "key": "working_days",
+                      "value": "{\n        \"0\": true,\n        \"1\": true,\n        \"2\": true,\n        \"3\": false,\n        \"4\": false,\n        \"5\": false,\n        \"6\": false\n    }",
+                      "type": "text",
+                      "uuid": "b689d78b-0343-4d2a-9450-6d05009a28af",
+                      "disabled": true
+                    },
+                    {
+                      "key": "flexible_reservation",
+                      "value": "true",
+                      "type": "text",
+                      "uuid": "47534895-cd22-4040-8123-f0bf3856d2f4",
+                      "disabled": true
+                    },
+                    {
+                      "key": "is_active",
+                      "value": "true",
+                      "type": "text",
+                      "uuid": "bb352792-ea9c-4250-8696-5f4a161e6fc2",
+                      "disabled": true
+                    },
+                    {
+                      "key": "description",
+                      "value": "وصف",
+                      "type": "text",
+                      "uuid": "80b80536-34bf-446b-b959-a081a1783288"
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/manager-club/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "manager-club",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show club",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/manager-club/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "manager-club",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "exception day",
+          "item": [
+            {
+              "name": "date",
+              "item": [
+                {
+                  "name": "show exception date",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "const response = pm.response.json();\r",
+                          "\r",
+                          "pm.environment.set(\"date_pricing\", response[0].id);\r",
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pricing/date/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pricing",
+                        "date",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "delete exception weekday",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pricing/date/{{date_pricing}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pricing",
+                        "date",
+                        "{{date_pricing}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "create exception weekday",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"date\": \"2026-6-5\",\r\n    \"start_time\": \"08:06:12\",\r\n    \"end_time\": \"18:02:11\",\r\n    \"percent\": 1\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pricing/date/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pricing",
+                        "date",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "weekday",
+              "item": [
+                {
+                  "name": "show exception weekday",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "const response = pm.response.json();\r",
+                          "\r",
+                          "pm.environment.set(\"weekday_pricing\", response[0].id);\r",
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pricing/weekday/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pricing",
+                        "weekday",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "delete exception weekday",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pricing/weekday/{{weekday_pricing}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pricing",
+                        "weekday",
+                        "{{weekday_pricing}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "create exception weekday",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"day_of_week\": 0,\r\n    \"start_time\": \"08:06:12\",\r\n    \"end_time\": \"18:02:11\",\r\n    \"percent\": 1\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/pricing/weekday/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "pricing",
+                        "weekday",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Booking",
+          "item": [
+            {
+              "name": "convert booking status",
+              "item": [
+                {
+                  "name": "show-convert-booking-status",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/show-convert-booking-status/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "show-convert-booking-status",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "convert booking status to pending player",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n\"new_date\":\"2026-05-11\",\r\n\"new_start_time\":\"10:55:00\",\r\n\"new_end_time\":\"11:54:00\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/1907b533-02f1-45d3-a25f-213ea96e75ee/convert-to-pending-player/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "1907b533-02f1-45d3-a25f-213ea96e75ee",
+                        "convert-to-pending-player",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "convert-booking",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"status\":3\r\n\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/9b9374f5-ccd6-46ab-ae5c-0950ae549413/convert-booking/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "9b9374f5-ccd6-46ab-ae5c-0950ae549413",
+                        "convert-booking",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "Create booking",
+              "item": [
+                {
+                  "name": "Create Booking",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"pitch\": \"15592ee1-d105-47c2-b5c7-a1c3a5b5a77e\",\r\n    \"date\": \"2026-03-05\",\r\n    \"start_time\": \"13:58\",\r\n    \"end_time\": \"14:58\",\r\n  // \"username\": \"جوكر2\",\r\n   \"phone\":\"0977777777\",\r\n   \"note_owner\":\"\",\r\n//    \"payment_status\":2, // 1 for Later and 2 for Deposit\r\n   \"status\":4, //3 for Pending_pay and 4 for Completed\r\n//    \"deposit\":5,\r\n   \"equipments\":[\r\n    // {\r\n    //     \"id\":\"8f5c4d2f-f35e-4e3a-adab-28c2f1fcc822\",\r\n    //     \"quantity\":1\r\n    // },\r\n    {\r\n        \"id\":\"c91f18f7-650d-4c22-af10-398fbcab1b25\",\r\n        \"quantity\":1\r\n    }\r\n\r\n   ]\r\n}\r\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "calculate-price",
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"pitch\": \"038bf093-ddaa-451e-bb19-6cb75686799c\",\r\n    \"date\": \"2026-05-22\",\r\n    \"start_time\": \"12:55\",\r\n    \"end_time\": \"13:55\",\r\n    \"equipments\":[\r\n    {\r\n        \"id\":\"a498a125-6b30-451c-9d4c-16b26ebb73f5\",\r\n        \"quantity\":1\r\n    },\r\n    {\r\n        \"id\":\"8f5c4d2f-f35e-4e3a-adab-28c2f1fcc822\",\r\n        \"quantity\":1\r\n    }\r\n\r\n   ]\r\n}\r\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/calculate-price/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "calculate-price",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "availabil equipment",
+                  "protocolProfileBehavior": {
+                    "disableBodyPruning": true
+                  },
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"pitch\": \"038bf093-ddaa-451e-bb19-6cb75686799c\",\r\n    \"date\": \"2026-05-22\",\r\n    \"start_time\": \"12:55\",\r\n    \"end_time\": \"13:55\"\r\n}\r\n",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/availabil-equipment/?date=2026-05-29&start_time=07:00&end_time=19:00",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "availabil-equipment",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "date",
+                          "value": "2026-05-29"
+                        },
+                        {
+                          "key": "start_time",
+                          "value": "07:00"
+                        },
+                        {
+                          "key": "end_time",
+                          "value": "19:00"
+                        }
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "booking-status",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/booking-status/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "booking-status",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "club opening-prices",
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/booking/opening-prices/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "booking",
+                        "opening-prices",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "show Booking base on pitch and date",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/booking/by-day-time-pitch?date=2026-03-05&pitch_id=15592ee1-d105-47c2-b5c7-a1c3a5b5a77e",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "booking",
+                    "by-day-time-pitch"
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-03-05"
+                    },
+                    {
+                      "key": "pitch_id",
+                      "value": "15592ee1-d105-47c2-b5c7-a1c3a5b5a77e"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show Booking base on pitch and date and time",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/booking/by-day-time-pitch/?date=2026-03-05&pitch_id=15592ee1-d105-47c2-b5c7-a1c3a5b5a77e&time_from=01:00&time_to=21:00",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "booking",
+                    "by-day-time-pitch",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-03-05"
+                    },
+                    {
+                      "key": "pitch_id",
+                      "value": "15592ee1-d105-47c2-b5c7-a1c3a5b5a77e"
+                    },
+                    {
+                      "key": "time_from",
+                      "value": "01:00"
+                    },
+                    {
+                      "key": "time_to",
+                      "value": "21:00"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show Booking details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/booking/b34ea8c7-1f2b-4abd-984a-0fa4e7d130dc",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "booking",
+                    "b34ea8c7-1f2b-4abd-984a-0fa4e7d130dc"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Equipment",
+          "item": [
+            {
+              "name": "CRUD for club",
+              "item": [
+                {
+                  "name": "show club equipment",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "const response = pm.response.json();\r",
+                          "\r",
+                          "pm.environment.set(\"club_equipment_id\", response[0].id);\r",
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "GET",
+                    "header": [],
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/equipment/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "equipment",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "update club equipment",
+                  "request": {
+                    "method": "PATCH",
+                    "header": [],
+                    "body": {
+                      "mode": "formdata",
+                      "formdata": [
+                        {
+                          "key": "quantity",
+                          "value": "5",
+                          "type": "text",
+                          "uuid": "27b6c26f-8044-4530-b6b8-d3c1793ddf72",
+                          "disabled": true
+                        },
+                        {
+                          "key": "is_active",
+                          "value": "false",
+                          "type": "text",
+                          "uuid": "8f4675cf-5137-4afd-867f-5e4d148e1f96"
+                        },
+                        {
+                          "key": "price",
+                          "value": "4444",
+                          "type": "text",
+                          "uuid": "ac06e651-375a-426b-9f78-689fd7494cac"
+                        }
+                      ]
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/equipment/{{club_equipment_id}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "equipment",
+                        "{{club_equipment_id}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "delete club equipment",
+                  "request": {
+                    "method": "DELETE",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/equipment/{{club_equipment_id}}/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "equipment",
+                        "{{club_equipment_id}}",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                },
+                {
+                  "name": "add club equipment",
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          ""
+                        ],
+                        "type": "text/javascript",
+                        "packages": {},
+                        "requests": {}
+                      }
+                    }
+                  ],
+                  "request": {
+                    "method": "POST",
+                    "header": [],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"equipment_id\": \"0930239f-2567-462e-8b5c-2119c2c53500\",\r\n    \"quantity\": 4,\r\n    \"price\": 100\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BaseURL}}/api/dashboard/manage/equipment/",
+                      "host": [
+                        "{{BaseURL}}"
+                      ],
+                      "path": [
+                        "api",
+                        "dashboard",
+                        "manage",
+                        "equipment",
+                        ""
+                      ]
+                    }
+                  },
+                  "response": []
+                }
+              ]
+            },
+            {
+              "name": "equipment-list",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/equipment-list/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "equipment-list",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Reports",
+          "item": [
+            {
+              "name": "equipment",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/dashboard/equipment/?date_from=2000-01-01&date_to=2028-01-01",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "dashboard",
+                    "equipment",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "date_from",
+                      "value": "2000-01-01"
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "2028-01-01"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "hourly",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/dashboard/hourly/?date_from=2026-01-01&date_to=2026-03-01",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "dashboard",
+                    "hourly",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "date_from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "2026-03-01"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "bookings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/dashboard/bookings/?date_from=2000-01-01&date_to=2028-01-01",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "dashboard",
+                    "bookings",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "date_from",
+                      "value": "2000-01-01"
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "2028-01-01"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "revenue",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/dashboard/revenue/?date_from=2000-01-01&date_to=2028-01-01",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "dashboard",
+                    "revenue",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "date_from",
+                      "value": "2000-01-01"
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "2028-01-01"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "booking duration manage",
+          "item": [
+            {
+              "name": "add booking-duration",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"duration\":45\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/booking-duration/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "booking-duration",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "delete booking-duration",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/booking-duration/{{booking_duration_id}}/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "booking-duration",
+                    "{{booking_duration_id}}",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "show booking-duration",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();\r",
+                      "\r",
+                      "pm.environment.set(\"booking_duration_id\", response[0].id);\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BaseURL}}/api/dashboard/manage/booking-duration/",
+                  "host": [
+                    "{{BaseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "dashboard",
+                    "manage",
+                    "booking-duration",
+                    ""
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{access_token}}",
+            "type": "string"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"phone\": \"0999999994\",\r\n    \"password\": \"AmjadK0\",\r\n    \"full_name\": \"امجد كوزلي\",\r\n    \"username\": \"جوكر\",\r\n    \"birthday\": \"2000-10-10\",\r\n    \"height\": 120,\r\n    \"weight\": 80,\r\n    \"foot_preference\": 1 // LEFT = 1 /// RIGHT = 2 /// BOTH = 3\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseURL}}/api/register/",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "register",
+                ""
+              ]
+            },
+            "description": "Gets information about the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Player Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();\r",
+                  "\r",
+                  "pm.globals.set(\"access_token\", response.access);\r",
+                  "pm.environment.set(\"access_token\", response.access);\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"phone\": \"0999999996\",\r\n    \"password\": \"AmjadK0\"\r\n    // \"phone\": \"0999999666\",\r\n    // \"password\": \"AmjadK0*\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseURL}}/api/login/user/",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "login",
+                "user",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Owner Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();\r",
+                  "\r",
+                  "pm.globals.set(\"access_token\", response.access);\r",
+                  "pm.environment.set(\"access_token\", response.access);\r",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"phone\": \"0999999994\",\r\n    \"password\": \"AmjadK0\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseURL}}/api/login/manager/",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "login",
+                "manager",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc3MDA1MDU3OSwiaWF0IjoxNzY5NDQ1Nzc5LCJqdGkiOiI3M2Q5MTk4MmE2ODU0ZjZkYjE5OWY5NWFjYmEwODliNSIsInVzZXJfaWQiOiJiM2RjY2I0OS03YjUzLTRjZWEtODUzMi1iNTRmOTVlMTAwNWUiLCJyb2xlIjoyLCJ1c2VyIjoiYjNkY2NiNDktN2I1My00Y2VhLTg1MzItYjU0Zjk1ZTEwMDVlIn0.NqGHjE_xAZcxSDPCOXh1mknZuWDJ3jarHh45PMnu8l8\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BaseURL}}/api/token/refresh/",
+              "host": [
+                "{{BaseURL}}"
+              ],
+              "path": [
+                "api",
+                "token",
+                "refresh",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "auth": {
+        "type": "noauth"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              ""
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-API-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://farming-simulator.pstmn.io"
+    }
+  ]
+}
