@@ -1,6 +1,7 @@
 from django.db.models import Avg, Count, Q, Subquery, OuterRef
 from django.db.models.functions import ExtractYear, Now
 from rest_framework.exceptions import ValidationError
+from django.conf import settings
 
 from player_team.models import Team, TeamMember, MemberStatus
  
@@ -39,7 +40,8 @@ class ShowChallengeTeamService:
                     ExtractYear(Now()) - ExtractYear('teammember__player__birthday'),
                     filter=active_members_q,
                 ),
-            )
+            ) 
+            .filter(active_member_count__gte=settings.MIN_TEAM_MEMBERS_FOR_CHALLENGE)  
             .only(
                 'id', 'name',
                 'goals_scored', 'total_wins', 'total_losses',

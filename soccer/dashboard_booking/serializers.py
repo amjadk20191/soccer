@@ -11,6 +11,103 @@ from django.db import transaction
 
 User = get_user_model()
 
+
+
+
+class ClosedBookingCreateSerializer(serializers.ModelSerializer):
+
+
+    class Meta:
+        model = Booking
+        fields = ['pitch', 'date', 'start_time', 'end_time', 'note_owner']
+        extra_kwargs = {
+            'pitch': {
+                'error_messages': {
+                    'required':       'هذا الحقل مطلوب.',
+                    'does_not_exist': 'الملعب المحدد غير موجود.',
+                    'incorrect_type': 'نوع البيانات غير صحيح.',
+                    'null':           'لا يمكن أن تكون هذه القيمة فارغة.',
+                }
+            },
+            'date': {
+                'error_messages': {
+                    'required': 'هذا الحقل مطلوب.',
+                    'invalid':  'أدخل تاريخاً صحيحاً.',
+                    'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
+                }
+            },
+            'start_time': {
+                'error_messages': {
+                    'required': 'هذا الحقل مطلوب.',
+                    'invalid':  'أدخل وقتاً صحيحاً.',
+                    'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
+                }
+            },
+            'end_time': {
+                'error_messages': {
+                    'required': 'هذا الحقل مطلوب.',
+                    'invalid':  'أدخل وقتاً صحيحاً.',
+                    'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
+                }
+            },
+            'note_owner': {
+                'error_messages': {
+                    'blank':      'لا يمكن أن يكون هذا الحقل فارغاً.',
+                    'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
+                }
+            },
+        }
+
+
+    def validate_pitch(self, value):
+        club_id = self.context['request'].auth.get('club_id')
+
+        if str(value.club_id) != club_id and not value.is_active and value.is_deteted:
+            raise serializers.ValidationError({"error": "الملعب  لا ينتمي إلى النادي."})
+        return value
+
+    def validate(self, attrs):
+        if attrs['start_time'] >= attrs['end_time']:
+            raise serializers.ValidationError({"error": "وقت النهاية يجب أن يكون بعد وقت البداية."})
+
+        # Check for overlapping bookings
+        pitch = attrs['pitch']
+        date = attrs['date']
+        start_time = attrs['start_time']
+        end_time = attrs['end_time']
+
+        overlapping = Booking.objects.filter(
+            pitch=pitch,
+            date=date,
+            status__in=BOOKING_STATUS_DENIED
+        ).filter(
+            start_time__lt=end_time,
+            end_time__gt=start_time
+        ).exists()
+
+        if overlapping:
+            raise serializers.ValidationError({"error": "هذا الوقت يتداخل مع حجز موجود."})
+
+        return attrs
+
+    def create(self, validated_data):
+        club_id = self.context['request'].auth.get('club_id')
+
+        with transaction.atomic():
+            booking = Booking.objects.create(
+                club_id=club_id,
+                price=0,
+                by_owner=True,
+                final_price=0,
+                status=BookingStatus.CLOSED.value,
+                **validated_data)
+
+        return booking
+
+
+
+
+
 class EquipmentBookingSerializer(serializers.Serializer):
     id = serializers.UUIDField(
         error_messages={
@@ -107,7 +204,7 @@ class BookingListPitchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Booking
         fields = [
-            'id', 'date', 'start_time', 'end_time', 'price', 'deposit', 'status_display',
+            'id', 'date', 'start_time', 'end_time', 'price', 'deposit', 'status_display', 'is_challenge',
             'player_name', 'full_name', 'phone', 'by_owner'
         ]
 
@@ -281,8 +378,12 @@ class BookingCreateSerializer(serializers.ModelSerializer):
                 final_price=price,
                 **validated_data)
             if equipments:
-                equipments = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments, validated_data['start_time'],  validated_data['end_time'])
-
+                final_price_with_equipments_ = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments, validated_data['start_time'],  validated_data['end_time'])
+                
+                
+                booking.final_price=final_price_with_equipments_
+                booking._force_signals_update = booking.status==BookingStatus.COMPLETED
+                booking.save(update_fields=['final_price', 'updated_at'])
         return booking
 
 class BookingUpdateSerializer(serializers.ModelSerializer):

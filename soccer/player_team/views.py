@@ -152,6 +152,7 @@ class TeamDetailsView(APIView):
                         # Player fields needed by serializer (via select_related)
                         'player__id',
                         'player__full_name',
+                        'player__image',
                         'player__username'
                     ).order_by('-is_captain', 'joined_at')
                 )

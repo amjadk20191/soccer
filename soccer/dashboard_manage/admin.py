@@ -7,9 +7,17 @@ from .models import (Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment,
     BookingNumStatistics,
     ClubHourlyStatistics,
     ClubEquipmentStatistics,
-    ClubOpeningTimeHistory
+    ClubOpeningTimeHistory,
+    ClubStaff
 )
 from django.utils.html import mark_safe
+
+
+@admin.register(ClubStaff)
+class ClubStaffAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'club')
+    search_fields = ('user__username', 'club__name')
+
 
 @admin.register(ClubOpeningTimeHistory)
 class ClubOpeningTimeHistoryAdmin(admin.ModelAdmin):

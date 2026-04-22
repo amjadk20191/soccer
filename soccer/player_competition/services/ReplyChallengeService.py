@@ -1,12 +1,14 @@
 from django.db import transaction
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from dashboard_booking.services.PricingService import PricingService
+from player_competition.services.CreateChallengeService import CreateChallengeService
 
 from ..models import Challenge, ChallengeStatus
 from player_booking.models import Booking, BookingStatus, PayStatus
 from django.db.models import Count, Q
 
 from player_team.models import Team, TeamMember, MemberStatus
+from player_competition.services.challenge_equipment_service import ChallengeEquipmentService
 
 
 class ReplyChallengeService:
@@ -78,6 +80,21 @@ class ReplyChallengeService:
                     status=MemberStatus.ACTIVE,
                 ).values("player_id", "is_captain", "team_id")
             )
+            team_1 = challenge.team_id
+            team_2 = challenge.challenged_team_id
+
+            players_1 = set()
+            players_2 = set()
+
+            for p in active_players:
+                if p["team_id"] == team_1:
+                    players_1.add(p["player_id"])
+                else:
+                    players_2.add(p["player_id"])
+
+            if len(players_1) != len(players_2):
+                raise ValidationError({"error": "يجب ان يكون الفريقان بنفس عدد الاعبين النشطين"})
+
 
             # Captain of the *sending* team — no extra join, no select_related needed.
             captain_id = next(
@@ -99,7 +116,7 @@ class ReplyChallengeService:
                     challenged_team__teammember__status=MemberStatus.ACTIVE,
                 ),
                 date=challenge.date,
-                status__in=[ChallengeStatus.PENDING_PAY, ChallengeStatus.ACCEPTED],
+                status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.ACCEPTED],
                 start_time__lt=challenge.end_time,
                 end_time__gt=challenge.start_time,
             ).exists()
@@ -109,11 +126,6 @@ class ReplyChallengeService:
                     {"error": "لا يمكن قبول التحدي بسبب تعارض في جدول الحجز لأحد أعضاء الفريقين."}
                 )
 
-            # ── Query 4: update challenge status ──────────────────────────
-            Challenge.objects.filter(id=challenge.id).update(
-                status=ChallengeStatus.PENDING_OWNER,
-            )
-            challenge.status = ChallengeStatus.PENDING_OWNER
 
             # ── Query 5: create linked booking ────────────────────────────
             pitch = challenge.pitch   # already select_related in execute()
@@ -136,9 +148,27 @@ class ReplyChallengeService:
                 is_challenge   = True,
                 by_owner       = False,
             )
+            # ── Query 6: convert challenge equipments → booking equipments ─
+            final_price_with_equipments = CreateChallengeService.convert_to_booking_equipments(
+                challenge = challenge,
+                booking   = booking,
+            )
 
-            # ── Query 6: link booking back to challenge ────────────────────
-            Challenge.objects.filter(id=challenge.id).update(booking_id=booking.id)
+            if final_price_with_equipments is not None:
+                booking.final_price = final_price_with_equipments
+                booking.save(update_fields=['final_price', 'updated_at'])   # ── Query 7 (conditional)
+
+            # ── Query 7/8: link booking back to challenge ──────────────────
+
+            # ── Query 4: update challenge status ──────────────────────────
+            Challenge.objects.filter(id=challenge.id).update(
+                status=ChallengeStatus.PENDING_OWNER,
+                booking_id=booking.id
+            )
+            challenge.status = ChallengeStatus.PENDING_OWNER
+
+            # Challenge.objects.filter(id=challenge.id).update(booking_id=booking.id)
             challenge.booking_id = booking.id
+
 
         return challenge

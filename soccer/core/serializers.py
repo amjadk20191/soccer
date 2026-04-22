@@ -2,7 +2,9 @@ import re
 
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import User
+
+from .utils import validate_profile_image
+from .models import User, UserDevice, Note
 
 from .validators import validate_phone_format
 
@@ -31,8 +33,61 @@ class CheckAvailabilityInputSerializer(serializers.Serializer):
         validate_phone_format(value)
         return value
 
+class UserSerializer(serializers.ModelSerializer):
+    age = serializers.IntegerField(read_only=True)
+    foot_preference = serializers.CharField(source='get_foot_preference_display', read_only=True)
 
-    
+    class Meta:
+        model = User
+        fields = [
+            'id', 'full_name', 'username', 'phone', 'role',
+            'birthday', 'age', 'height', 'weight', 'foot_preference','image',
+            'booking_time', 'cancel_time', 'is_active', 'created_at', 'updated_at',
+        ]
+
+class NoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Note
+        fields = ['id', 'note', 'created_at', 'updated_at']
+        
+        
+class UpdateUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        min_length=8,
+        style={'input_type': 'password'}
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            'full_name', 'phone', 'username',
+            'height', 'weight', 'foot_preference', 'birthday',
+            'password','image', 
+        ]
+        extra_kwargs = {
+            'image': {
+                'required': False,
+            }
+        }
+    def validate_password(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        validate_password(value)
+        return value
+    def validate_image(self, value):
+        is_valid, error = validate_profile_image(value)
+        if not is_valid:
+            raise serializers.ValidationError(error)
+        return value
+
+
+class UserDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserDevice
+        fields = ['fcm_token']
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
 
     password = serializers.CharField(
@@ -49,7 +104,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'phone', 'password', 'full_name', 'username',
+            'phone', 'password', 'full_name', 'username','image'  ,
             'birthday', 'height', 'weight', 'foot_preference'
         ]
         extra_kwargs = {
@@ -84,6 +139,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                     'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
                 }
             },
+            'image': {                                          
+                'required': False,                             
+                'error_messages': {
+                    'invalid':   'أدخل صورة صحيحة.',
+                    'null':      'لا يمكن أن تكون هذه القيمة فارغة.',
+                }
+            },
             'height': {
                 'error_messages': {
                     'required':  'هذا الحقل مطلوب.',
@@ -111,6 +173,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             },
         }
 
+    def validate_image(self, value):
+        if not value:
+            return value
+        is_valid, error = validate_profile_image(value)
+        if not is_valid:
+            raise serializers.ValidationError(error)
+        return value
+    
     def create(self, validated_data):
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)

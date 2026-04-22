@@ -1,6 +1,10 @@
 from django.urls import path
 
-from .views import BookingPriceForUserAPIView, EquipmentAvailabilityForUserView, ConsolidatedBookingListViewAlt, ActiveClubListAPIView, ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub
+from .views import (UserBookingListView, BookingPriceForUserAPIView, 
+                    EquipmentAvailabilityForUserView, ConsolidatedBookingListViewAlt, 
+                    ActiveClubListAPIView, ClubOpeningPrices, BookingCreateForUser, 
+                    ShowBookingDurationForClub, UserBookingDetailView)
+from .views import BookingPriceForUserAPIView, EquipmentAvailabilityForUserView, ConsolidatedBookingListViewAlt, ActiveClubListAPIView, ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub, CouponCreateView, PitchSearchView
 
 
 urlpatterns = [
@@ -11,5 +15,10 @@ urlpatterns = [
     path("make-booking/", BookingCreateForUser.as_view(), name="make_booking_by_user"),
     path("availabil-equipment/", EquipmentAvailabilityForUserView.as_view(), name="availabil-equipment"),
     path('calculate-price/', BookingPriceForUserAPIView.as_view(), name='booking-price'),
+    path('mybooking/', UserBookingListView.as_view(), name='user-bookings'),
+    path('my/<uuid:booking_id>/', UserBookingDetailView.as_view(), name='user-booking-detail'),
 
+
+    path('add-coupon/', CouponCreateView.as_view(), name='add-coupon'),
+    path('pitches/search/', PitchSearchView.as_view(), name='pitch-search'),
 ]

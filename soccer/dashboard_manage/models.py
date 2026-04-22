@@ -9,6 +9,8 @@ import uuid
 
 from django.utils import timezone
 
+
+
 class Club(models.Model):
     """Football clubs/venues"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -44,6 +46,15 @@ class Club(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class ClubStaff(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.user} - {self.club}"
 
 class ClubOpeningTimeHistory(models.Model):
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
@@ -92,12 +103,12 @@ class Pitch(models.Model):
     name = models.CharField(max_length=100)
     image = models.ImageField(upload_to=upload_to_model_name, validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"], message="Only JPG, JPEG, PNG, and WEBP images are allowed." )])
     type = models.CharField(max_length=15)
-    size_high = models.DecimalField(max_digits=5, decimal_places=2)
-    size_width = models.DecimalField(max_digits=5, decimal_places=2)
+    size_high = models.DecimalField(max_digits=5, decimal_places=2,  validators=[MinValueValidator(1.0)])
+    size_width = models.DecimalField(max_digits=5, decimal_places=2,  validators=[MinValueValidator(1.0)])
     is_active = models.BooleanField(default=True)
     is_deteted = models.BooleanField(default=False)
-    price_first = models.DecimalField(max_digits=10, decimal_places=2)
-    price_second = models.DecimalField(max_digits=10, decimal_places=2)
+    price_first = models.DecimalField(max_digits=10, decimal_places=2,  validators=[MinValueValidator(1.0)])
+    price_second = models.DecimalField(max_digits=10, decimal_places=2,  validators=[MinValueValidator(1.0)])
     time_interval = models.TimeField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -140,7 +151,7 @@ class ClubEquipment(models.Model):
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
     equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
     quantity = models.PositiveSmallIntegerField(validators=[MinValueValidator(0)])
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2,  validators=[MinValueValidator(1.0)])
     is_active = models.BooleanField(default=True)
     is_deteted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

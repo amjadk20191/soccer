@@ -16,7 +16,6 @@ class EquipmentBookingService:
 
 
     @classmethod
-    @transaction.atomic
     def Create_Equipment_Booking(cls, club_id, booking:Booking, equipments, start_time, end_time):
         
         final_price = booking.price
@@ -73,11 +72,10 @@ class EquipmentBookingService:
 
         equipments=BookingEquipment.objects.bulk_create(BookingEquipment_list)
 
-        booking.final_price=final_price
-        booking._force_signals_update = booking.status==BookingStatus.COMPLETED
-        booking.save(update_fields=['final_price', 'updated_at'])
+        return final_price
 
-        return equipments
+        
+
     
     @classmethod
     def Get_Equipment_Price(cls, club_id, equipments, start_time, end_time):

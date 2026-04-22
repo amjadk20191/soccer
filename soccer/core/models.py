@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError 
 import uuid
+from .utils import user_image_upload_path,DEFAULT_USER_IMAGE
 
 
 
@@ -62,8 +63,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_validator = RegexValidator(regex=r'^09\d{8}$', message=_('Phone number must start with "09" and contain exactly 10 digits (e.g., 0912345678).'))
     phone = models.CharField(validators=[phone_validator], max_length=10, unique=True, verbose_name=_('Phone Number'))
     
+    #profile image
+    image = models.ImageField(
+        upload_to=user_image_upload_path,
+        default=DEFAULT_USER_IMAGE,
+        # null=True,
+        blank=True,
+        verbose_name=_('Profile Image')
+    )
+    image_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_('Image Updated At')
+    )
+    
     # Role & Permissions
     role = models.PositiveSmallIntegerField(default=1, verbose_name=_('Role'))
+    # 1 for player
+    # 2 for owner
+    # 3 for us
+    # 4 for owner staff
     
     # Physical Attributes
     birthday = models.DateField(verbose_name=_('Birthday'))
@@ -113,8 +132,39 @@ class User(AbstractBaseUser, PermissionsMixin):
             (today.month, today.day) < (self.birthday.month, self.birthday.day)
         )
 
+    
 
+class UserDevice(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='devices',
+        verbose_name=_('User')
+    )
+    fcm_token = models.CharField(max_length=255, unique=True, verbose_name=_('FCM Token'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
 
+    class Meta:
+        verbose_name = _('User Device')
+        verbose_name_plural = _('User Devices')
+        db_table = 'user_devices'
+
+    def __str__(self):
+        return f"{self.user} - {self.fcm_token[:20]}"
+
+class Note(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notes'
+    )
+    role = models.IntegerField()  # stored automatically from user.role
+    note = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user} - {self.note[:100]}"
 
 
 class Notification(models.Model):

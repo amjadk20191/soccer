@@ -15,6 +15,7 @@ class TeamMemberSerializer(serializers.ModelSerializer):
     member_id = serializers.UUIDField(source='player.id', read_only=True)
     full_name = serializers.CharField(source='player.full_name', read_only=True)
     username = serializers.CharField(source='player.username', read_only=True)
+    image = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
     class Meta:
@@ -24,10 +25,22 @@ class TeamMemberSerializer(serializers.ModelSerializer):
             'member_id',
             'full_name',
             'username',
+            'image',
             'status_display',
             'is_captain',
             'joined_at'
         ]
+
+    def get_image(self, obj):
+        if obj.player.image:
+            image = obj.player.image
+
+            request = self.context.get('request')
+            print("request", request)
+            if request:
+                return request.build_absolute_uri(image.url)
+            return image.url
+        return None
 
 class UserTeamListSerializer(serializers.ModelSerializer):
     """
@@ -92,6 +105,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
             'created_at',
         ]
 
+    
     def get_logo(self, obj):
         """Get team logo URL, building absolute URL if request context is available"""
         if obj.logo.logo:
@@ -114,7 +128,8 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
                 team=obj,
                 status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE]  # Only ACTIVE or INACTIVE
             ).select_related('player').order_by('-is_captain', 'joined_at')
-        return TeamMemberSerializer(members, many=True).data
+        
+        return TeamMemberSerializer(members, many=True, context={'request': self.context.get('request')}).data
 
     def get_members_count(self, obj):
         """Get total number of team members with ACTIVE or INACTIVE status"""
@@ -336,7 +351,7 @@ class TeamCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"name": "لا يمكن أن يكون اسم الفريق فارغًا."})
         return value.strip()
 
-
+from django.conf import settings
 class TeamUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer for updating team information (PATCH).
@@ -390,6 +405,22 @@ class TeamUpdateSerializer(serializers.ModelSerializer):
         if not value or not value.strip():
             raise serializers.ValidationError({"name": "لا يمكن أن يكون اسم الفريق فارغًا."})
         return value.strip()
+   
+    def validate_challenge_mode(self, value):
+        # Only enforce the check when trying to enable challenge mode
+        if not value:
+            return value
+
+        team = self.instance
+        active_count = team.teammember_set.filter(status=MemberStatus.ACTIVE).count()
+
+        if active_count < settings.MIN_TEAM_MEMBERS_FOR_CHALLENGE:
+            raise serializers.ValidationError(
+                {"error": f"""يجب أن يحتوي الفريق على {settings.MIN_TEAM_MEMBERS_FOR_CHALLENGE} أعضاء نشطين على الأقل لتفعيل وضع التحدي.
+                عدد الأعضاء الحاليين: {active_count}."""}
+            )
+
+        return value
 
 class TeamResponseSerializer(serializers.ModelSerializer):
     """

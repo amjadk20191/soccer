@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from dashboard_booking.models import  BookingNotification
 from  player_booking.models import Booking, BookingStatus, BookingEquipment
 from dashboard_manage.models import Pitch, ClubEquipment 
@@ -6,6 +6,9 @@ from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from soccer.enm import BOOKING_STATUS_DENIED
 from django.db.models import Prefetch
+
+from player_competition.models import Challenge, ChallengePlayerBooking, ChallengeStatus
+from player_team.models import MemberStatus, TeamMember
 from .EquipmentBookingService import EquipmentBookingService
 
 class BookingService:
@@ -40,8 +43,24 @@ class BookingService:
         """Convert Pending_manager to Pending_pay"""
         if booking.status != BookingStatus.PENDING_MANAGER:
             raise  ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن تحويلها إلى معلقة بانتظار الدفع "})
-        
         cls._check_if_has_overlap_booking(booking)
+
+        print("//////////////////////////////////////////////////////////////////")
+        print(booking.is_challenge)
+        if booking.is_challenge:
+            challenge = (
+                Challenge.objects
+                .filter(booking_id=booking.id)
+                .only('id', 'team_id', 'challenged_team_id')
+                .first()
+            )
+            print(challenge)
+            print("//////////////////////////////////////////////////////////////////")
+
+            if challenge:
+                Challenge.objects.filter(id=challenge.id).update(status=ChallengeStatus.PENDING_PAY)
+                cls._seed_challenge_player_bookings(booking, challenge)
+
         booking.status = BookingStatus.PENDING_PAY
         booking.save(update_fields=['status', 'updated_at'])
         return booking
@@ -52,7 +71,11 @@ class BookingService:
         """Reject booking (from Pending_manager)"""
         if booking.status != BookingStatus.PENDING_MANAGER:
             raise ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن إلغاؤها"})
-        
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.REJECTED)
+
+
         booking.status = BookingStatus.REJECT
         booking.save(update_fields=['status', 'updated_at'])
         return booking
@@ -85,9 +108,13 @@ class BookingService:
     @transaction.atomic
     def owner_canceled_booking(cls, booking):
         """CANCELED booking (from Completed or Pending_pay) by owner"""
-        if not(booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
+        if not(booking.status == BookingStatus.CLOSED or booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
             raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (تم انشاءها من قبل صاحب الملعب) او بانتظار اللاعب يمكن إلغاؤها"})
         
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.CANCELED)
+
         booking.status = BookingStatus.CANCELED
         booking.save(update_fields=['status', 'updated_at'])
         return booking
@@ -107,7 +134,7 @@ class BookingService:
     @transaction.atomic
     def convert_to_pending_player(cls, booking, club_id, new_date, new_start_time, new_end_time):
         """Convert Pending_manager to Pending_player and create notification"""
-        if booking.status != BookingStatus.PENDING_MANAGER:
+        if booking.status != BookingStatus.PENDING_MANAGER and booking.is_challenge:
             raise ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن تحويلها إلى معلقة (من قبل اللاعب)"})
         
         if not booking.player:
@@ -185,8 +212,36 @@ class BookingService:
                                         "id": equipment["id"],
                                         })
 
-    
-    
+    @classmethod
+    def _seed_challenge_player_bookings(cls, booking, challenge):
+        """Bulk-insert active players from both challenge teams into ChallengePlayerBooking."""
+        active_members = (
+            TeamMember.objects
+            .filter(
+                team_id__in=[challenge.team_id, challenge.challenged_team_id],
+                status=MemberStatus.ACTIVE,
+            )
+            .values_list('player_id', 'team_id')  # fetch both in one query
+        )
+
+        try:
+            ChallengePlayerBooking.objects.bulk_create(
+                [
+                    ChallengePlayerBooking(
+                        booking_id=booking.id,
+                        challenge_id=challenge.id,
+                        player_id=player_id,
+                        team_id=team_id,
+                    )
+                    for player_id, team_id in active_members
+                ],
+            )
+        except IntegrityError:
+            raise ValidationError({
+                "error": "لاعبون مسجلون مسبقاً في هذه المباراة"
+            })
+        
+        
     ################################## Player
     @classmethod
     @transaction.atomic
@@ -194,7 +249,11 @@ class BookingService:
         """CANCELED booking (from Completed or Pending_pay) by player"""
         if not(booking.status in [BookingStatus.COMPLETED, BookingStatus.PENDING_PAY]):
             raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (من قبل اللاعب) يمكن إلغاؤها"})
-        
+
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.CANCELED)
+
         booking.status = BookingStatus.CANCELED
         booking.save(update_fields=['status', 'updated_at'])
         return booking

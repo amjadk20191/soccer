@@ -406,7 +406,7 @@ class TeamInvitationService:
         if not team_data['player_exists']:
             raise NotFound(detail={"error": "اللاعب ليس عضواً نشطاً في هذا الفريق."})
 
-        # -1 because we're removing this player
+        # -1 because we're removing this leaved player
         if team_data['active_count'] - 1 < settings.MIN_TEAM_MEMBERS_FOR_CHALLENGE:
             Team.objects.filter(id=team_id).update(challenge_mode=False)
 

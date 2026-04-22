@@ -2,7 +2,32 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import Booking, Review, BookingStatus, BookingEquipment
+from .models import Booking, Review, BookingStatus, BookingEquipment, Coupon, CouponUsage
+
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = (
+        'code',
+        'discount_type',
+        'discount_value',
+        'is_active',
+        'expires_at',
+        'max_uses',
+        'used_count',
+        'club',
+    )
+    search_fields = ('code',)
+    list_filter = ('discount_type', 'is_active', 'expires_at', 'club')
+    list_select_related = ('club',)
+
+
+@admin.register(CouponUsage)
+class CouponUsageAdmin(admin.ModelAdmin):
+    list_display = ('coupon', 'user', 'used_at')
+    search_fields = ('coupon__code', 'user__username', 'user__email')
+    list_filter = ('used_at',)
+    list_select_related = ('coupon', 'user')
 
 
 @admin.register(BookingEquipment)
@@ -41,7 +66,7 @@ class BookingEquipmentAdmin(admin.ModelAdmin):
             'fields': ('booking', 'equipment', 'equipment_def')
         }),
         ('Item Details', {
-            'fields': ('quantity', 'price', 'is_challenge', 'by_owner')
+            'fields': ('quantity', 'price')
         }),
         ('Financial', {
             'fields': ('total_price',),
@@ -138,7 +163,7 @@ class BookingAdmin(admin.ModelAdmin):
             'fields': (
                 'club', 'pitch', 'player', 'phone', 'date',
                 'start_time', 'end_time', 'price', 'final_price', 'status',
-                'payment_status', 'deposit', 'note_owner', 'by_owner',
+                'payment_status', 'deposit', 'note_owner', 'by_owner', 'is_challenge'
             )
         }),
         (_('Admin Notes'), {

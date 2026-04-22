@@ -1,7 +1,8 @@
 from rest_framework.exceptions import PermissionDenied
 
-from ..models import Challenge, ChallengeStatus
+from ..models import Challenge, ChallengeEquipment, ChallengeStatus
 from player_team.models import Team
+from django.db.models import Prefetch
 
 
 class GetSentChallengesService:
@@ -47,5 +48,21 @@ class GetSentChallengesService:
                 status__in=GetSentChallengesService.VISIBLE_STATUSES,
             )
             .select_related("challenged_team", "pitch", "club","challenged_team__logo")
+            .prefetch_related(
+                Prefetch(
+                    "challengeequipment_set",
+                    queryset=ChallengeEquipment.objects.select_related(
+                        "equipment__equipment"
+                    ).only(
+                        "id",
+                        "challenge_id",
+                        "quantity",
+                        "equipment__id",
+                        "equipment__equipment__name",
+                        "equipment__equipment__description",
+                        "equipment__equipment__image",
+                    )
+                )
+            )
             .order_by("-created_at")
         )

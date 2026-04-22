@@ -9,5 +9,5 @@ venv/
 env/
 .venv/
 ENV/
-
+.match.json
 **/*.pyc

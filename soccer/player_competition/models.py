@@ -1,10 +1,14 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from player_team.models import Team
-from dashboard_manage.models import Pitch, Club
+from dashboard_manage.models import ClubEquipment, Pitch, Club
 from core.models import User
 from player_booking.models import Booking
 import uuid
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+User = get_user_model()
 
 
 class ChallengeStatus(models.IntegerChoices):
@@ -48,3 +52,32 @@ class Challenge(models.Model):
         ]
     
 
+# this table for save players who played the game (booking/challenge)
+#this instert happen after convert booking status to PENDING_PAY
+class ChallengePlayerBooking(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
+    team = models.ForeignKey(Team, on_delete=models.CASCADE)
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
+    player = models.ForeignKey(User, on_delete=models.CASCADE)
+
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['challenge', 'player'],
+                name='unique_player_per_challenge'
+            )
+        ]
+
+
+class ChallengeEquipment(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
+    equipment = models.ForeignKey(ClubEquipment, on_delete=models.CASCADE)
+    # equipment_def = models.ForeignKey(Equipment, on_delete=models.CASCADE)
+    # name = models.CharField(max_length=100)
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
+    # price = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)

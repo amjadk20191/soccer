@@ -2,7 +2,20 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, Notification
+from .models import User, Notification, Note
+
+
+@admin.register(Note)
+class NoteAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'short_note', 'created_at')
+    search_fields = ('user__username', 'user__email', 'note')
+    list_filter = ('role', 'created_at')
+    list_select_related = ('user',)
+
+    def short_note(self, obj):
+        return obj.note[:50]
+    short_note.short_description = "Note"
+
 
 
 @admin.register(User)

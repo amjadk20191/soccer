@@ -8,11 +8,11 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from django.db import transaction
 from datetime import date
-from player_booking.models import Booking
+from player_booking.models import Booking, BookingStatus
 from django.db.models import Sum
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
-
+from django.db.models import Q
 from dashboard_manage.models import (
     BookingNumStatistics,
     BookingPriceStatistics,
@@ -40,8 +40,7 @@ class ClubManagerView(APIView):
 
         obj = get_object_or_404(
             Club, 
-            pk=club_id, 
-            manager=self.request.user
+            pk=club_id
         )
         return obj
     def get(self, request):
@@ -154,12 +153,18 @@ class PitchViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        now = timezone.now()
+        today = now.date()
+        current_time = now.time()
         
         if Booking.objects.filter(pitch=instance, status__in=[
-            Booking.BookingStatus.PENDING_MANAGER,
-            Booking.BookingStatus.PENDING_PAY,
+            BookingStatus.PENDING_MANAGER,
+            BookingStatus.PENDING_PAY,
             BookingStatus.COMPLETED
-        ]).exists():
+        ]).filter(
+            Q(date__gt=today) |  # future days
+            Q(date=today, end_time__gte=current_time)  # today but not finished yet
+            ).exists():
             return Response(
                 {"error": "لا يمكن حذف الملعب لأنه مرتبط بحجوزات نشطة أو مكتملة."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -381,13 +386,13 @@ class BookingCountsReportView(APIView):
             BookingNumStatistics.objects
             .filter(club=club, day__gte=date_from, day__lte=date_to)
             .aggregate(
-                completed_num=Sum("completed_num"),
+                completed_num_player=Sum("completed_num"), # from player
                 completed_num_owner=Sum("completed_num_owner"),
                 canceled_completed_owner=Sum("canceled_num_from_completed_owner"),
                 canceled_completed_player=Sum("canceled_num_from_completed_player"),
                 canceled_pending_owner=Sum("canceled_num_from_pending_pay_owner"),
                 canceled_pending_player=Sum("canceled_num_from_pending_pay_player"),
-                pending_pay_num=Sum("pending_pay_num"),
+                pending_pay_num_player=Sum("pending_pay_num"), # from player
                 pending_pay_num_owner=Sum("pending_pay_num_owner"),
                 pending_player_num=Sum("pending_player_num"),
                 reject_num=Sum("reject_num"),
@@ -397,7 +402,7 @@ class BookingCountsReportView(APIView):
             )
         )
 
-        completed_total = _int(agg["completed_num"])
+        completed_player = _int(agg["completed_num_player"]) # from player
         completed_owner = _int(agg["completed_num_owner"])
 
         can_co  = _int(agg["canceled_completed_owner"])
@@ -405,16 +410,16 @@ class BookingCountsReportView(APIView):
         can_po  = _int(agg["canceled_pending_owner"])
         can_pp  = _int(agg["canceled_pending_player"])
 
-        pp_total = _int(agg["pending_pay_num"])
+        pp_player = _int(agg["pending_pay_num_player"])
         pp_owner = _int(agg["pending_pay_num_owner"])
 
         return Response({
             "date_from": str(date_from),
             "date_to":   str(date_to),
             "completed": {
-                "total":  completed_total,
+                "total":  completed_player + completed_owner,
                 "owner":  completed_owner,
-                "player": completed_total - completed_owner,
+                "player": completed_player,
             },
             "canceled": {
                 "from_completed_owner":    can_co,
@@ -424,9 +429,9 @@ class BookingCountsReportView(APIView):
                 "total": can_co + can_cp + can_po + can_pp,
             },
             "pending_pay": {
-                "total":  pp_total,
+                "total":  pp_player + pp_owner,
                 "owner":  pp_owner,
-                "player": pp_total - pp_owner,
+                "player": pp_player,
             },
             "other": {
                 "pending_player": _int(agg["pending_player_num"]),

@@ -2,8 +2,19 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import Challenge, ChallengeStatus
+from .models import Challenge, ChallengeStatus, ChallengePlayerBooking, ChallengeEquipment
 
+
+@admin.register(ChallengeEquipment)
+class ChallengeEquipmentAdmin(admin.ModelAdmin):
+    list_display = ('challenge', 'equipment', 'quantity', 'created_at')
+    search_fields = ('challenge__id', 'equipment__id')
+    list_filter = ('challenge',)
+    list_select_related = ('challenge', 'equipment')
+
+@admin.register(ChallengePlayerBooking)
+class ChallengePlayerBookingAdmin(admin.ModelAdmin):
+    list_display = ('id', 'challenge', 'team', 'player', 'booking')
 
 # Bulk actions for challenge management
 @admin.action(description=_('Mark selected challenges as Accepted'))

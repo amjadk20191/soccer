@@ -18,7 +18,8 @@ from .serializers import (
     BookingPriceRequestSerializer,
     BookingConvertStatusSerializer,
     BookingListPitchSerializer,
-    EquipmentAvailabilityQuerySerializer
+    EquipmentAvailabilityQuerySerializer,
+    ClosedBookingCreateSerializer
 )
 from django.conf import settings
 
@@ -28,6 +29,12 @@ from dashboard_booking.services.PricingService import PricingService
 from dashboard_booking.services.ClubTimeForOwnerService import ClubTimeForOwnerService
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
 from django.db.models import Prefetch
+from rest_framework import generics 
+
+
+
+class ClosedBookingCreateView(generics.CreateAPIView):
+    serializer_class = ClosedBookingCreateSerializer
 
 
 
@@ -97,7 +104,6 @@ class BookingViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     """
 
-
     @action(detail=False, methods=['get'], url_path='by-day-time-pitch')
     def by_day_time_pitch(self, request):
         """
@@ -142,7 +148,7 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         try:
             booking = BookingService.owner_update_booking_status(pk, serializer.validated_data['status'], self.request.auth.get('club_id'))
-            return Response({"status": f"Booking converted to {BookingStatus(serializer.validated_data['status']).label}"})
+            return Response({"status": f"تم تغيير حالة الحجز الى {BookingStatus(serializer.validated_data['status']).label}"})
         except ValueError as e:
             return Response(
                 {'error': str(e)},
@@ -170,6 +176,9 @@ class BookingViewSet(viewsets.ModelViewSet):
                 (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
                 (BookingStatus.NO_SHOW.name, BookingStatus.NO_SHOW.value),
 
+            ],
+            BookingStatus.CLOSED.name:[
+                (BookingStatus.CANCELED.name, BookingStatus.CANCELED.value),
             ]
             })
    
@@ -201,7 +210,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                 new_start_time=serializer.validated_data['new_start_time'],
                 new_end_time=serializer.validated_data['new_end_time']
             )
-            return Response({"status": "Booking converted to Pending player", "id": booking.id})
+            return Response({"status": "تم تغيير حالة الحجز الى حالة (بانتظار تاكيد اللاعب)", "id": booking.id})
         except ValueError as e:
             return Response(
                 {'error': str(e)},

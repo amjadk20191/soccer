@@ -1,10 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import SentChallengeListView, ChallengeCancelView, ChallengeTeamsView, CreateChallengeAPIView, PendingChallengeListView, ChallengeReplyView
+from .views import ChallengeDetailView, TeamDetailView, PlayerProfileView, SentChallengeListView, ChallengeCancelView, ChallengeTeamsView, CreateChallengeAPIView, PendingChallengeListView, ChallengeReplyView
 
 router = DefaultRouter()
 
 urlpatterns = [
+    path('team/<uuid:team_id>/', TeamDetailView.as_view(), name='team-detail'),
     path('teams/<uuid:team_id>/challenges/', ChallengeTeamsView.as_view()),
     path('create/', CreateChallengeAPIView.as_view(), name='create-challenge'),
     # GET  /teams/{team_id}/challenges/pending/
@@ -35,6 +36,9 @@ urlpatterns = [
         SentChallengeListView.as_view(),
         name="challenge-sent-list",
     ),
+    path('players/<uuid:player_id>/', PlayerProfileView.as_view(), name='player-profile'),
+    path('challenge/<uuid:challenge_id>/', ChallengeDetailView.as_view(), name='challenge-detail'),
+
     path('', include(router.urls)),
 
 ]

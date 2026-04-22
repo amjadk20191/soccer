@@ -5,16 +5,16 @@ from core.models import User
 from dashboard_manage.models import Club
 import uuid
 
-class BookingNotificationStatus(models.IntegerChoices):
-    PENDING_MANAGER = 1, _('بانتظار تاكيد المدير')
-    PENDING_PLAYER = 2, _('بانتظار تاكيد اللاعب')
-    PENDING_PAY = 3, _('بانتظار الدفع')
-    COMPLETED = 4, _('مكتمل')
-    CANCELED = 5, _('ملغى')
-    REJECT = 6, _('مرفوض')
-    NO_SHOW = 7, _('لم يحضر')
-    DISPUTED = 8, _('مشكلة')
-    EXPIRED = 9, _('انتهت صلاحيته')
+# class BookingNotificationStatus(models.IntegerChoices):
+#     PENDING_MANAGER = 1, _('بانتظار تاكيد المدير')
+#     PENDING_PLAYER = 2, _('بانتظار تاكيد اللاعب')
+#     PENDING_PAY = 3, _('بانتظار الدفع')
+#     COMPLETED = 4, _('مكتمل')
+#     CANCELED = 5, _('ملغى')
+#     REJECT = 6, _('مرفوض')
+#     NO_SHOW = 7, _('لم يحضر')
+#     DISPUTED = 8, _('مشكلة')
+#     EXPIRED = 9, _('انتهت صلاحيته')
 
 
 class BookingStatusHistory(models.Model):

@@ -41,6 +41,7 @@ from dashboard_manage.models import (
 from player_booking.models import (
     Booking,
     BookingStatus as S,
+    Coupon,
     PayStatus
 )
 
@@ -195,6 +196,30 @@ def _hour_minutes(date, start_time, end_time) -> dict[int, int]:
 
     return buckets
 
+def _get_stat_price(instance):
+    """
+    Global coupon (club_id is None) → reverse discount to get original price
+    Club coupon (club_id is set)    → use final_price (club offered the discount)
+    No coupon                       → use final_price as is
+    """
+    coupon = None
+    if hasattr(instance, 'coupon_id') and instance.coupon_id:
+        
+        coupon = Coupon.objects.filter(pk=instance.coupon_id).first()
+
+    if coupon is None:
+        return instance.final_price  # no coupon → use final_price
+
+    if coupon.club_id is None:
+        # Global coupon → reverse the discount to get original price
+        if coupon.discount_type == 'percentage':
+            original = instance.final_price / (1 - coupon.discount_value / 100)
+        else:
+            original = instance.final_price + coupon.discount_value
+        return original
+
+    # Club coupon → use final_price (discount is intentional by club)
+    return instance.final_price
 
 def _merge(target: dict, source: dict):
     for k, v in source.items():
@@ -310,7 +335,7 @@ def signal_update_num_statistics(sender, instance, created, **kwargs):
 # 4b.  SIGNAL — BookingPriceStatistics
 # ─────────────────────────────────────────────────────────────
 
-@receiver(post_save, sender=Booking)
+@receiver(post_save, sender=Booking)  
 def signal_update_price_statistics(sender, instance, created, **kwargs):
     """
     Updates money statistics (completed and pending-pay revenue).
@@ -323,7 +348,7 @@ def signal_update_price_statistics(sender, instance, created, **kwargs):
     snap = getattr(instance, "_old_snapshot", None)
 
     if not created and snap and (
-        snap.status      == instance.status
+        snap.status          == instance.status
         and snap.final_price == instance.final_price
         and snap.date        == instance.date
     ):
@@ -331,25 +356,36 @@ def signal_update_price_statistics(sender, instance, created, **kwargs):
 
     price_undo: dict = {}
     price_new:  dict = {}
-    is_deposit=instance.payment_status == PayStatus.DEPOSIT
+    is_deposit = instance.payment_status == PayStatus.DEPOSIT
+
+    # ✅ Use correct price based on coupon type
+    stat_price = _get_stat_price(instance)
+    snap_stat_price = _get_stat_price(snap) if snap else None
 
     if not created and snap:
         if is_deposit:
-            _merge(price_undo, _price_deltas_deposit(snap.status, snap.payment_status, snap.deposit, snap.by_owner, snap.final_price, -1, instance.status))
-
+            _merge(price_undo, _price_deltas_deposit(
+                snap.status, snap.payment_status, snap.deposit,
+                snap.by_owner, snap_stat_price, -1, instance.status
+            ))
         else:
-            _merge(price_undo, _price_deltas(snap.status, snap.by_owner, snap.final_price, multiplier=-1))
-    
-    if is_deposit:
-        _merge(price_new, _price_deltas_deposit(instance.status, instance.payment_status, instance.deposit, instance.by_owner, instance.final_price, multiplier=1))
+            _merge(price_undo, _price_deltas(
+                snap.status, snap.by_owner, snap_stat_price, multiplier=-1
+            ))
 
+    if is_deposit:
+        _merge(price_new, _price_deltas_deposit(
+            instance.status, instance.payment_status, instance.deposit,
+            instance.by_owner, stat_price, multiplier=1
+        ))
     else:
-        _merge(price_new, _price_deltas(instance.status, instance.by_owner, instance.final_price, multiplier=1))
+        _merge(price_new, _price_deltas(
+            instance.status, instance.by_owner, stat_price, multiplier=1
+        ))
 
     if snap and price_undo:
         _upsert(BookingPriceStatistics, snap.club_id, snap.date, price_undo)
     _upsert(BookingPriceStatistics, instance.club_id, instance.date, price_new)
-
 
 # ─────────────────────────────────────────────────────────────
 # 4c.  SIGNAL — ClubHourlyStatistics
