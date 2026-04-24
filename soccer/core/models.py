@@ -92,7 +92,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # Booking Information
     booking_time = models.PositiveIntegerField(default=0, verbose_name=_('Booking Time'))
+    challenge_time = models.PositiveIntegerField(default=0, verbose_name=_('Booking Time'))
     cancel_time = models.PositiveIntegerField(default=0, verbose_name=_('Cancel Time'))
+    no_show_time = models.PositiveIntegerField(default=0, verbose_name=_('No show Time'))
+    disputed_time = models.PositiveIntegerField(default=0, verbose_name=_('Disputed Time'))
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))

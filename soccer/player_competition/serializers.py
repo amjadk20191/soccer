@@ -107,7 +107,7 @@ class PlayerInTeamSerializer(serializers.Serializer):
     full_name       = serializers.CharField(source='player.full_name',               read_only=True)
     username        = serializers.CharField(source='player.username',                read_only=True)
     is_captain      = serializers.BooleanField(read_only=True)
-    joined_at       = serializers.DateTimeField(read_only=True)
+    joined_at       = serializers.DateTimeField(format="%Y-%m-%d", read_only=True)
     image           = serializers.SerializerMethodField()
 
     def get_image(self, obj):
@@ -131,6 +131,8 @@ class ChallengeHistorySerializer(serializers.Serializer):
     """
     id             = serializers.UUIDField(read_only=True)
     date           = serializers.DateField(read_only=True)
+    start_time     = serializers.TimeField(read_only=True)
+    end_time       = serializers.TimeField(read_only=True)
     my_score       = serializers.SerializerMethodField()
     opponent_score = serializers.SerializerMethodField()
     opponent       = serializers.SerializerMethodField()
@@ -206,6 +208,8 @@ class TeamDetailSerializer(TeamLogoMixin, serializers.ModelSerializer):
             reverse=True,
         )
         return ChallengeHistorySerializer(all_challenges, many=True, context=context).data
+
+
 class TeamInPlayerChallengeSerializer(serializers.Serializer):
     id   = serializers.UUIDField(read_only=True)
     name = serializers.CharField(read_only=True)

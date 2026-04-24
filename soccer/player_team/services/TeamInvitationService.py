@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied, NotFoun
 from core.models import User
 from ..models import Team, TeamMember, Request, MemberStatus
 from django.db.models import Count, Q
-
+from django.conf import settings
 
 class RequestStatus:
     """Request status constants"""
@@ -280,7 +280,7 @@ class TeamInvitationService:
         return invitations
     
     @classmethod
-    def search_users_by_username(cls, captain_id, current_team, username_filter, limit=10):
+    def search_users_by_username(cls, captain_id, current_team, username_filter, request, limit=10):
         """
         Search users by username filter and return top matching users.
         
@@ -303,7 +303,7 @@ class TeamInvitationService:
                 is_active=True
             )
             .order_by('username')
-            .values('id', 'username', 'full_name').exclude(id=captain_id)[:limit]
+            .values('id', 'username', 'full_name', 'image').exclude(id=captain_id)[:limit]
         )
 
         # Extract IDs to use in the next two queries
@@ -335,6 +335,12 @@ class TeamInvitationService:
                 user['connection_status'] = 'pending'
             else:
                 user['connection_status'] = 'not'
+            # for user image
+            if user['image']:
+                # print(settings.MEDIA_URL)
+                user['image'] = request.build_absolute_uri(settings.MEDIA_URL + user['image'])
+            else:
+                user['image'] = None
 
         return users
     

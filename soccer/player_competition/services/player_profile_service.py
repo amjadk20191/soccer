@@ -56,5 +56,6 @@ class PlayerProfileService:
 
         if not player:
             raise NotFound({"error": "اللاعب غير موجود."})
+        print(player)
 
         return player

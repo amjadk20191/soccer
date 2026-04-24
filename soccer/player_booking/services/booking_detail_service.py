@@ -62,7 +62,7 @@ class UserBookingDetailService:
                 'is_challenge',
                 'player_id',
                 'pitch_id', 'pitch__name',
-                'club_id', 'club__name',
+                'club_id', 'club__name', 'coupon_id'
             )
             .first()
         )

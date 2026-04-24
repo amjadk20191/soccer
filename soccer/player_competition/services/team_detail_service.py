@@ -31,7 +31,7 @@ class TeamDetailService:
                 .filter(status=ChallengeStatus.ACCEPTED)
                 .select_related('challenged_team__logo')
                 .only(
-                    'id', 'status', 'date',
+                    'id', 'date', 'start_time', 'end_time',
                     'result_team', 'result_challenged_team',
                     'team_id',
                     'challenged_team_id',
@@ -48,14 +48,14 @@ class TeamDetailService:
                 .filter(status=ChallengeStatus.ACCEPTED)
                 .select_related('team__logo')
                 .only(
-                    'id', 'status', 'date',
+                    'id', 'date', 'start_time', 'end_time',
                     'result_team', 'result_challenged_team',
                     'team_id',
                     'team__name',
                     'team__logo__logo',
                     'challenged_team_id',
                 )
-                .order_by('-date'),
+                .order_by('-created_at')[:3],
             to_attr='received_challenges',
         )
 

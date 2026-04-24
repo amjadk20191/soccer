@@ -34,7 +34,7 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('is_active', 'is_staff', 'is_superuser', 'role', 'groups', 'user_permissions')
         }),
         (_('Booking Stats'), {
-            'fields': ('booking_time', 'cancel_time')
+            'fields': ('booking_time', 'cancel_time', 'challenge_time', 'disputed_time', 'no_show_time')
         }),
         (_('Important Dates'), {
             'fields': ('last_login', 'created_at', 'updated_at')

@@ -8,13 +8,9 @@ from player_booking.models import Booking
 
 class UserBookingService:
 
+
     @staticmethod
-    def get_user_bookings(user_id: str):
-        """
-        Returns all bookings where the user:
-          - Made the booking directly (player_id)
-          - Was/is a team member in a challenge tied to the booking (ChallengePlayerBooking)
-        """
+    def get_user_bookings(user_id: str, status: int | None = None):
         challenge_prefetch = Prefetch(
             'challenge_set',
             queryset=Challenge.objects
@@ -23,15 +19,15 @@ class UserBookingService:
                     'challenged_team__logo',
                 )
                 .only(
-                    'id', 'status',
+                    'id',
                     'result_team', 'result_challenged_team',
                     'team_id', 'team__name', 'team__logo__logo',
                     'challenged_team_id', 'challenged_team__name', 'challenged_team__logo__logo',
-                    
                 ),
             to_attr='challenges',
         )
-        return (
+        print("user_id",user_id)
+        qs = (
             Booking.objects
             .filter(
                 Q(player_id=user_id) |
@@ -44,8 +40,13 @@ class UserBookingService:
                 'date', 'start_time', 'end_time',
                 'final_price',
                 'status',
-                'pitch_id', 'club_id', 'player_id',
+                'pitch_id', 'club_id', 'player_id', 'club__name', 'pitch__name'
             )
             .distinct()
             .order_by('-created_at')
         )
+
+        if status is not None:
+            qs = qs.filter(status=status)
+
+        return qs
