@@ -23,7 +23,8 @@ class PlayerProfileService:
                 .only(
                     'id', 'team_id', 'challenge_id',
                     'challenge__id',
-                    'challenge__status',
+                    'challenge__start_time',
+                    'challenge__end_time',
                     'challenge__result_team',
                     'challenge__result_challenged_team',
                     'challenge__date',
@@ -37,7 +38,7 @@ class PlayerProfileService:
                 .filter(
                     challenge__status=ChallengeStatus.ACCEPTED  # only finished challenges
                 )
-                .order_by('-challenge__date'),
+                .order_by('-challenge__date')[:3],
             to_attr='played_challenges',
         )
 
@@ -49,7 +50,7 @@ class PlayerProfileService:
                 'id', 'full_name', 'username',
                 'image', 'birthday',
                 'height', 'weight', 'foot_preference',
-                'booking_time', 'cancel_time',
+                'booking_time', 'cancel_time', 'disputed_time', 'no_show_time'
             )
             .first()
         )

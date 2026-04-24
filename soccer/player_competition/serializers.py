@@ -226,12 +226,14 @@ class PlayerChallengeSerializer(serializers.Serializer):
     """Represents a single challenge the player participated in"""
     id                       = serializers.UUIDField(source='challenge.id',                       read_only=True)
     date                     = serializers.DateField(source='challenge.date',                     read_only=True)
-    status                   = serializers.CharField(source='challenge.get_status_display',       read_only=True)
+    start_time                   = serializers.CharField(source='challenge.start_time',       read_only=True)
+    end_time                   = serializers.CharField(source='challenge.end_time',       read_only=True)
     result_team              = serializers.IntegerField(source='challenge.result_team',           read_only=True)
     result_challenged_team   = serializers.IntegerField(source='challenge.result_challenged_team',read_only=True)
     team                     = serializers.SerializerMethodField()
     challenged_team          = serializers.SerializerMethodField()
     player_team_id           = serializers.UUIDField(source='team_id', read_only=True)  # which side the player was on
+    player_side        = serializers.SerializerMethodField()
 
     def get_team(self, obj):
         return TeamInPlayerChallengeSerializer(
@@ -243,13 +245,25 @@ class PlayerChallengeSerializer(serializers.Serializer):
             obj.challenge.challenged_team, context=self.context
         ).data
 
+    def get_player_side(self, obj):
+        # obj.team_id  → the team this player was registered under in ChallengePlayerBooking
+        # compare against the challenge's two sides
+        if obj.team_id == obj.challenge.team_id:
+            return 'team'
+        elif obj.team_id == obj.challenge.challenged_team_id:
+            return 'challenged_team'
+        return None  # shouldn't happen, but safe fallback
+
 
 class PlayerProfileSerializer(serializers.ModelSerializer):
-    foot_preference    = serializers.CharField(source='get_foot_preference_display', read_only=True)
+    # foot_preference_display    = serializers.CharField(source='get_foot_preference_display', read_only=True)
+    # foot_preference    = serializers.CharField(source='get_foot_preference', read_only=True)
     age                = serializers.IntegerField(read_only=True)
     image              = serializers.SerializerMethodField()
     challenges         = serializers.SerializerMethodField()
-    total_challenges   = serializers.SerializerMethodField()
+    negative_time      = serializers.SerializerMethodField()
+
+
 
     class Meta:
         model  = User
@@ -264,10 +278,18 @@ class PlayerProfileSerializer(serializers.ModelSerializer):
             'foot_preference',
             'booking_time',
             'cancel_time',
-            'total_challenges',
+            'challenge_time',
+            'negative_time',
             'challenges',
         ]
-
+    
+    def get_negative_time(self, obj):
+        return (
+            getattr(obj, 'cancel_time',   0) +
+            getattr(obj, 'no_show_time',  0) +
+            getattr(obj, 'disputed_time', 0)
+        )
+    
     def get_image(self, obj):
         request = self.context.get('request')
         if obj.image:
@@ -278,8 +300,7 @@ class PlayerProfileSerializer(serializers.ModelSerializer):
         played = getattr(obj, 'played_challenges', [])
         return PlayerChallengeSerializer(played, many=True, context=self.context).data
 
-    def get_total_challenges(self, obj):
-        return len(getattr(obj, 'played_challenges', []))
+   
 
 class CreateChallengeEquipmentsSerializer(serializers.Serializer):
     id = serializers.UUIDField(
