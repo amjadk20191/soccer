@@ -12,4 +12,3 @@ env/
 ENV/
 .match.json
 **/*.pyc
-match.json
