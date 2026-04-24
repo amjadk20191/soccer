@@ -23,9 +23,10 @@ from django.conf import settings
 
 from .services.BookingHistoryService import UserBookingService 
 
-
+from rest_framework.exceptions import ValidationError
+from player_booking.models import BookingStatus
 from .services.booking_detail_service import UserBookingDetailService
-
+from .pagination import MyBookingPagination
 
 class UserBookingDetailView(generics.RetrieveAPIView):
     serializer_class   = BookingDetailSerializer
@@ -38,13 +39,45 @@ class UserBookingDetailView(generics.RetrieveAPIView):
     
 
 
+# class UserBookingListView(generics.ListAPIView):
+#     serializer_class   = UserBookingSerializer
+
+#     def get_queryset(self):
+#         return UserBookingService.get_user_bookings(self.request.user.id)
+
+class BookingStatusListView(APIView):
+    def get(self, request):
+        data = {
+            str(member.label): member.value
+            for member in BookingStatus
+            if member.name != 'CLOSED'
+        }
+        return Response(data)
+    
 class UserBookingListView(generics.ListAPIView):
-    serializer_class   = UserBookingSerializer
+    serializer_class = UserBookingSerializer
+    pagination_class = MyBookingPagination
 
     def get_queryset(self):
-        return UserBookingService.get_user_bookings(self.request.user.id)
+        status = self._get_status_param()
+        return UserBookingService.get_user_bookings(self.request.user.id, status=status)
 
+    def _get_status_param(self) -> int | None:
+        raw = self.request.query_params.get('status')
+        if raw is None:
+            return None
 
+        try:
+            value = int(raw)
+        except ValueError:
+            raise ValidationError({'status': 'Must be an integer.'})
+
+        if value not in BookingStatus.values:
+            valid = ', '.join(f'{s.value} ({s.label})' for s in BookingStatus)
+            raise ValidationError({'status': f'Invalid status. Valid choices: {valid}'})
+
+        return value
+    
 
 class ActiveClubListAPIView(generics.ListAPIView):
     """

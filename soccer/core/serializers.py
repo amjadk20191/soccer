@@ -35,14 +35,14 @@ class CheckAvailabilityInputSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     age = serializers.IntegerField(read_only=True)
-    foot_preference = serializers.CharField(source='get_foot_preference_display', read_only=True)
+    # foot_preference = serializers.CharField(source='get_foot_preference_display', read_only=True)
 
     class Meta:
         model = User
         fields = [
-            'id', 'full_name', 'username', 'phone', 'role',
+            'id', 'full_name', 'username', 'phone',
             'birthday', 'age', 'height', 'weight', 'foot_preference','image',
-            'booking_time', 'cancel_time', 'is_active', 'created_at', 'updated_at',
+            'booking_time', 'cancel_time', 'challenge_time', 'no_show_time', 'disputed_time'
         ]
 
 class NoteSerializer(serializers.ModelSerializer):

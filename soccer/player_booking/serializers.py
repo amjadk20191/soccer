@@ -98,7 +98,7 @@ class BookingEquipmentSerializer(serializers.Serializer):
 
 
 class BookingDetailSerializer(serializers.ModelSerializer):
-    status         = serializers.CharField(source='get_status_display',         read_only=True)
+    status_display         = serializers.CharField(source='get_status_display',         read_only=True)
     payment_status = serializers.CharField(source='get_payment_status_display', read_only=True)
     pitch          = PitchInBookingSerializer(read_only=True)
     club           = ClubInBookingSerializer(read_only=True)
@@ -108,7 +108,8 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
-
+    is_coupon = serializers.SerializerMethodField()
+    
     class Meta:
         model  = Booking
         fields = [
@@ -120,12 +121,14 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'final_price',
             'deposit',
             'status',
+            'status_display',
             'payment_status',
             'is_challenge',
             'pitch',
             'club',
             'challenge',
-            'equipment'
+            'equipment',
+            'is_coupon'
         ]
 
     def get_challenge(self, obj):
@@ -141,10 +144,12 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         context = {**self.context, 'team_players': team_players}
         return ChallengeDetailSerializer(challenges[0], context=context).data
 
+    def get_is_coupon(self, obj):
+        return obj.coupon_id is not None
+
 
 
 class ChallengeResultSerializer(serializers.ModelSerializer):
-    status           = serializers.CharField(source='get_status_display', read_only=True)
     team             = TeamInChallengeSerializer(read_only=True)
     challenged_team  = TeamInChallengeSerializer(read_only=True)
 
@@ -153,7 +158,6 @@ class ChallengeResultSerializer(serializers.ModelSerializer):
         model  = Challenge
         fields = [
             'id',
-            'status',
             'team',             # full object with id, name, logo
             'result_team',
             'challenged_team',  # full object with id, name, logo
@@ -163,8 +167,11 @@ class ChallengeResultSerializer(serializers.ModelSerializer):
 
 
 class UserBookingSerializer(serializers.ModelSerializer):
-    status         = serializers.CharField(source='get_status_display',         read_only=True)
+    status_display         = serializers.CharField(source='get_status_display', read_only=True)
     challenge      = serializers.SerializerMethodField()
+    pitch_name     = serializers.CharField(source='pitch.name')
+    club_name     = serializers.CharField(source='club.name')
+
 
     class Meta:
         model  = Booking
@@ -174,9 +181,12 @@ class UserBookingSerializer(serializers.ModelSerializer):
             'start_time',
             'end_time',
             'final_price',
-            'status',           
+            'status',   
+            'status_display',        
             'pitch_id',
+            'pitch_name',
             'club_id',
+            'club_name',
             'challenge',
         ]
 

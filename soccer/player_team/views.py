@@ -322,6 +322,7 @@ class SearchUsersView(APIView):
             captain_id,
             team_id,
             username_filter,
+            request,
             limit=10
         )
         

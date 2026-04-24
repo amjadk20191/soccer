@@ -150,6 +150,18 @@ class UserLoginAPIView(APIView):
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
+            'full_name': user.full_name,
+            'username': user.username,
+            'phone': user.phone,
+            'birthday': user.birthday,
+            'height': user.height,
+            'weight': user.weight,
+            'foot_preference': user.foot_preference,
+            'booking_time': user.booking_time,
+            'challenge_time': user.challenge_time,
+            'cancel_time': user.cancel_time,
+            'image': request.build_absolute_uri(user.image.url) if user.image else None,
+
             # 'user_id': user.id,
             # 'role': user.role,
         }, status=status.HTTP_200_OK)
