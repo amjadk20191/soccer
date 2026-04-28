@@ -18,6 +18,10 @@ class ChallengeStatus(models.IntegerChoices):
     ACCEPTED = 4, _('مقبول')
     REJECTED = 5, _('مرفوض')
     CANCELED = 6, _('ملغى')
+    NO_SHOW = 7, _('لم يحضر')
+    DISPUTED_SCORE = 8, _('مشكلة في النتيجة')
+    DISPUTED = 9, _('مشكلة')
+    EXPIRED = 10, _('انتهت صلاحيته')
 
 
 class Challenge(models.Model):
@@ -49,6 +53,8 @@ class Challenge(models.Model):
             models.Index(fields=['date']),
             models.Index(fields=['team']),
             models.Index(fields=['challenged_team']),
+            models.Index(fields=['status', 'created_at']),
+
         ]
     
 
@@ -68,6 +74,9 @@ class ChallengePlayerBooking(models.Model):
                 fields=['challenge', 'player'],
                 name='unique_player_per_challenge'
             )
+        ]
+        indexes = [
+        models.Index(fields=['booking_id', 'player_id']),
         ]
 
 

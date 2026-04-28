@@ -19,9 +19,13 @@ from .models import Booking, Coupon
 from .services.ClubInfoService import ClubInfoService
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
 from django.conf import settings
+from .services.PitchSearchService import PitchSearchService
+from .pagination import PitchSearchPagination
 
+from rest_framework.utils.urls import replace_query_param
 
-from .services.BookingHistoryService import UserBookingService 
+from .services.BookingHistoryService import ARABIC_STATUS_MAP, UserBookingService, VALID_ARABIC_STATUSES
+
 
 from rest_framework.exceptions import ValidationError
 from player_booking.models import BookingStatus
@@ -45,39 +49,88 @@ class UserBookingDetailView(generics.RetrieveAPIView):
 #     def get_queryset(self):
 #         return UserBookingService.get_user_bookings(self.request.user.id)
 
-class BookingStatusListView(APIView):
-    def get(self, request):
-        data = {
-            str(member.label): member.value
-            for member in BookingStatus
-            if member.name != 'CLOSED'
-        }
-        return Response(data)
+# class BookingStatusListView(APIView):
+#     def get(self, request):
+#         data = {
+#             {
+#             "label":str(member.label),
+#             "value": member.value
+#             }
+#             for member in BookingStatus
+#             if member.name != 'CLOSED'
+#         }
+#         return Response(data)
     
-class UserBookingListView(generics.ListAPIView):
+
+
+
+class UserBookingListView(generics.GenericAPIView):
     serializer_class = UserBookingSerializer
     pagination_class = MyBookingPagination
 
-    def get_queryset(self):
-        status = self._get_status_param()
-        return UserBookingService.get_user_bookings(self.request.user.id, status=status)
+    def get(self, request, *args, **kwargs):
+        arabic_label = self._get_status_param()
+        paginator    = self.pagination_class()
 
-    def _get_status_param(self) -> int | None:
+        page_size = paginator.page_size
+        if paginator.page_size_query_param:
+            try:
+                page_size = int(request.query_params.get(paginator.page_size_query_param, page_size))
+                page_size = min(page_size, paginator.max_page_size)
+            except (ValueError, TypeError):
+                pass
+
+        page   = max(1, int(request.query_params.get('page', 1)))
+        limit  = page_size
+        offset = (page - 1) * page_size
+
+        items, total = UserBookingService.fetch_page(
+            user_id=str(request.user.id),
+            arabic_label=arabic_label,
+            limit=limit,
+            offset=offset,
+        )
+
+        serializer = self.get_serializer(items, many=True)
+
+        base_url     = request.build_absolute_uri()
+        next_url     = replace_query_param(base_url, 'page', page + 1) if offset + limit < total else None
+        previous_url = replace_query_param(base_url, 'page', page - 1) if page > 1 else None
+
+        return Response({
+            'count':    total,
+            'next':     next_url,
+            'previous': previous_url,
+            'results':  serializer.data,
+        })
+
+    def _get_status_param(self) -> str | None:
         raw = self.request.query_params.get('status')
         if raw is None:
             return None
+        if raw not in VALID_ARABIC_STATUSES:
+            valid = '، '.join(VALID_ARABIC_STATUSES)
+            raise ValidationError({'error': f'حالة غير صحيحة. الخيارات المتاحة: {valid}'})
+        return raw
+    # def _get_status_param(self) -> int | None:
+    #     raw = self.request.query_params.get('status')
+    #     if raw is None:
+    #         return None
+    #     try:
+    #         value = int(raw)
+    #     except ValueError:
+    #         raise ValidationError({'status': 'Must be an integer.'})
+    #     if value not in BookingStatus.values:
+    #         valid = ', '.join(f'{s.value} ({s.label})' for s in BookingStatus)
+    #         raise ValidationError({'status': f'Invalid status. Valid choices: {valid}'})
+    #     return value   
 
-        try:
-            value = int(raw)
-        except ValueError:
-            raise ValidationError({'status': 'Must be an integer.'})
-
-        if value not in BookingStatus.values:
-            valid = ', '.join(f'{s.value} ({s.label})' for s in BookingStatus)
-            raise ValidationError({'status': f'Invalid status. Valid choices: {valid}'})
-
-        return value
-    
+class StatusKeysForUserBookingListAPIView(APIView):
+    def get(self, request):
+  
+        return Response({
+            "statuses": list(ARABIC_STATUS_MAP.keys())
+        })
 
 class ActiveClubListAPIView(generics.ListAPIView):
     """
@@ -166,65 +219,98 @@ class ShowBookingDurationForClub(APIView):
 
         return Response(duration)
 
-class PitchSearchView(APIView):
+# class PitchSearchView(APIView):
 
+#     def post(self, request):
+#         serializer = PitchSearchSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         date = serializer.validated_data['date']
+#         start_time = serializer.validated_data['start_time']
+#         end_time = serializer.validated_data['end_time']
+#         user_lat = serializer.validated_data['user_latitude']
+#         user_lon = serializer.validated_data['user_longitude']
+#         pitch_type = serializer.validated_data.get('type', None)
+#         size_high = serializer.validated_data.get('size_high', None)
+#         size_width = serializer.validated_data.get('size_width', None)
+
+#         # Get booked pitch ids that overlap with requested time
+#         booked_pitch_ids = Booking.objects.filter(
+#             date=date,
+#             status__in=BOOKING_STATUS_DENIED,  # your existing constant
+#             start_time__lt=end_time,
+#             end_time__gt=start_time
+#         ).values_list('pitch_id', flat=True)
+
+#         # Get available pitches
+#         pitches = Pitch.objects.filter(
+#             is_active=True,
+#             is_deteted=False,
+#             club__is_active=True,
+#         ).exclude(
+#             id__in=booked_pitch_ids
+#         ).select_related('club')
+
+#         # Optional filters
+#         if pitch_type:
+#             pitches = pitches.filter(type=pitch_type)
+#         if size_high:
+#             pitches = pitches.filter(size_high=size_high)
+#         if size_width:
+#             pitches = pitches.filter(size_width=size_width)
+
+#         # Calculate distance for each pitch and attach it
+#         results = []
+#         for pitch in pitches:
+#             distance = haversine_distance(
+#                 user_lat, user_lon,
+#                 pitch.club.latitude, pitch.club.longitude
+#             )
+#             pitch.distance_km = distance
+#             results.append(pitch)
+
+#         # Sort by nearest to farthest
+#         results.sort(key=lambda p: p.distance_km)
+
+#         response_serializer = PitchSearchResultSerializer(
+#             results,
+#             many=True,
+#             context={'request': request}
+#         )
+#         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+
+
+class PitchSearchView(APIView):
     def post(self, request):
         serializer = PitchSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        date = serializer.validated_data['date']
-        start_time = serializer.validated_data['start_time']
-        end_time = serializer.validated_data['end_time']
-        user_lat = serializer.validated_data['user_latitude']
-        user_lon = serializer.validated_data['user_longitude']
-        pitch_type = serializer.validated_data.get('type', None)
-        size_high = serializer.validated_data.get('size_high', None)
-        size_width = serializer.validated_data.get('size_width', None)
-
-        # Get booked pitch ids that overlap with requested time
-        booked_pitch_ids = Booking.objects.filter(
-            date=date,
-            status__in=BOOKING_STATUS_DENIED,  # your existing constant
-            start_time__lt=end_time,
-            end_time__gt=start_time
-        ).values_list('pitch_id', flat=True)
-
-        # Get available pitches
-        pitches = Pitch.objects.filter(
-            is_active=True,
-            is_deteted=False,
-            club__is_active=True,
-        ).exclude(
-            id__in=booked_pitch_ids
-        ).select_related('club')
-
-        # Optional filters
-        if pitch_type:
-            pitches = pitches.filter(type=pitch_type)
-        if size_high:
-            pitches = pitches.filter(size_high=size_high)
-        if size_width:
-            pitches = pitches.filter(size_width=size_width)
-
-        # Calculate distance for each pitch and attach it
-        results = []
-        for pitch in pitches:
-            distance = haversine_distance(
-                user_lat, user_lon,
-                pitch.club.latitude, pitch.club.longitude
-            )
-            pitch.distance_km = distance
-            results.append(pitch)
-
-        # Sort by nearest to farthest
-        results.sort(key=lambda p: p.distance_km)
-
-        response_serializer = PitchSearchResultSerializer(
-            results,
-            many=True,
-            context={'request': request}
+        qs, effective_hours_map = PitchSearchService.search(
+            date=data['date'],
+            start_time=data['start_time'],
+            end_time=data['end_time'],
+            user_lat=data['user_latitude'],
+            user_lon=data['user_longitude'],
+            pitch_type=data.get('type'),
+            size_high=data.get('size_high'),
+            size_width=data.get('size_width'),
         )
-        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        paginator = PitchSearchPagination()
+        page = paginator.paginate_queryset(qs, request)  # queryset evaluated here
+
+        # Attach effective hours to each pitch object on this page
+        for pitch in page:
+            pitch.effective_open, pitch.effective_close = (
+                PitchSearchService._resolve_club_hours(pitch.club, effective_hours_map)
+            )
+
+        return paginator.get_paginated_response(
+            PitchSearchResultSerializer(page, many=True, context={'request': request}).data
+        )
 
 class ConsolidatedBookingListViewAlt(APIView):
     """Alternative approach using helper method"""

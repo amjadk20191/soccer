@@ -14,6 +14,8 @@ from datetime import datetime
 from player_competition.models import Challenge
 from itertools import groupby
 
+from .services.BookingHistoryService import UserBookingItem
+
 
 
 class PitchInBookingSerializer(serializers.Serializer):
@@ -128,7 +130,8 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'club',
             'challenge',
             'equipment',
-            'is_coupon'
+            'is_coupon',
+            'created_at'
         ]
 
     def get_challenge(self, obj):
@@ -166,36 +169,52 @@ class ChallengeResultSerializer(serializers.ModelSerializer):
         ]
 
 
-class UserBookingSerializer(serializers.ModelSerializer):
-    status_display         = serializers.CharField(source='get_status_display', read_only=True)
+class UserBookingSerializer(serializers.Serializer):
+    # entry_type     = serializers.CharField()
+    id             = serializers.UUIDField()
+    date           = serializers.DateField()
+    start_time     = serializers.TimeField()
+    end_time       = serializers.TimeField()
+    final_price    = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
+    status         = serializers.IntegerField(allow_null=True)
+    status_display = serializers.SerializerMethodField()
+    # pitch_id       = serializers.UUIDField(allow_null=True)
+    pitch_name     = serializers.CharField(allow_null=True)
+    # club_id        = serializers.UUIDField(allow_null=True)
+    club_name      = serializers.CharField(allow_null=True)
     challenge      = serializers.SerializerMethodField()
-    pitch_name     = serializers.CharField(source='pitch.name')
-    club_name     = serializers.CharField(source='club.name')
+    is_booking     = serializers.SerializerMethodField() 
+    def get_status_display(self, obj: UserBookingItem):
+        return obj.get_status_display()
 
-
-    class Meta:
-        model  = Booking
-        fields = [
-            'id',
-            'date',
-            'start_time',
-            'end_time',
-            'final_price',
-            'status',   
-            'status_display',        
-            'pitch_id',
-            'pitch_name',
-            'club_id',
-            'club_name',
-            'challenge',
-        ]
-
-    def get_challenge(self, obj):
-        challenges = getattr(obj, 'challenges', [])
-        if not challenges:
+    def get_challenge(self, obj: UserBookingItem):
+        if obj.challenge_id is None:
             return None
-        return ChallengeResultSerializer(challenges[0], context=self.context).data 
+        request = self.context.get('request')
 
+        def logo_url(path):
+            if not path:
+                return None
+            return request.build_absolute_uri(f'/media/{path}') if request else f'/media/{path}'
+
+        return {
+            'id':                     obj.challenge_id,
+            'status':                 obj.challenge_status,
+            'result_team':            obj.result_team,
+            'result_challenged_team': obj.result_challenged_team,
+            'team': {
+                'id':   obj.team_id,
+                'name': obj.team_name,
+                'logo': logo_url(obj.team_logo),
+            },
+            'challenged_team': {
+                'id':   obj.challenged_team_id,
+                'name': obj.challenged_team_name,
+                'logo': logo_url(obj.challenged_team_logo),
+            },
+        }    
+    def get_is_booking(self, obj: UserBookingItem) -> bool:
+        return obj.entry_type == 'booking'
 
 class ConsolidatedBookingQuerySerializer(serializers.Serializer):
     """Validates query parameters for consolidated booking endpoint"""
@@ -548,33 +567,43 @@ class PitchSearchSerializer(serializers.Serializer):
         return attrs
 
 class PitchSearchResultSerializer(serializers.ModelSerializer):
-    club_name = serializers.CharField(source='club.name')
-    club_address = serializers.CharField(source='club.address')
-    club_latitude = serializers.DecimalField(source='club.latitude', max_digits=9, decimal_places=6)
-    club_longitude = serializers.DecimalField(source='club.longitude', max_digits=9, decimal_places=6)
-    club_logo = serializers.ImageField(source='club.logo')
-    club_open_time = serializers.TimeField(source='club.open_time')
-    club_close_time = serializers.TimeField(source='club.close_time')
-    club_rating_avg = serializers.DecimalField(source='club.rating_avg', max_digits=3, decimal_places=2)
+    club_name         = serializers.CharField(source='club.name')
+    club_address      = serializers.CharField(source='club.address')
+    club_latitude     = serializers.DecimalField(source='club.latitude', max_digits=9, decimal_places=6)
+    club_longitude    = serializers.DecimalField(source='club.longitude', max_digits=9, decimal_places=6)
+    club_logo         = serializers.ImageField(source='club.logo')
+    club_rating_avg   = serializers.DecimalField(source='club.rating_avg', max_digits=3, decimal_places=2)
     club_rating_count = serializers.IntegerField(source='club.rating_count')
-    distance_km = serializers.SerializerMethodField()
+
+    club_open_time  = serializers.SerializerMethodField()
+    club_close_time = serializers.SerializerMethodField()
+    # distance_km     = serializers.SerializerMethodField()
 
     class Meta:
         model = Pitch
         fields = [
             'id', 'name', 'type', 'image',
             'size_high', 'size_width',
-            'price_first', 'price_second',
-            'time_interval',
+            # 'price_first', 'price_second',
+            # 'time_interval',
             'club_name', 'club_address',
             'club_latitude', 'club_longitude',
-            'club_logo', 'club_open_time', 'club_close_time',
+            'club_logo',
+            'club_open_time', 'club_close_time',
             'club_rating_avg', 'club_rating_count',
-            'distance_km'
+            # 'distance_km',
         ]
 
-    def get_distance_km(self, obj):
-        return round(getattr(obj, 'distance_km', 0), 2)
+    def get_club_open_time(self, obj):
+        # effective_open attached by the view after pagination
+        return getattr(obj, 'effective_open', obj.club.open_time)
+
+    def get_club_close_time(self, obj):
+        return getattr(obj, 'effective_close', obj.club.close_time)
+
+    # def get_distance_km(self, obj):
+    #     return round(getattr(obj, 'distance_km', 0), 2)    
+
 
 class BookingPriceRequestForUserSerializer(serializers.ModelSerializer):
     equipments = EquipmentBookingSerializer(many=True, required=False)
