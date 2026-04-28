@@ -1,13 +1,112 @@
 from django.utils import timezone
 from rest_framework import serializers
 from player_team.models import Team, TeamMember
-from .models import Challenge, ChallengePlayerBooking
+from .models import Challenge, ChallengePlayerBooking, ChallengeStatus
 from datetime import date, timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
+
+class TeamSnippetSerializer(serializers.Serializer):
+    id   = serializers.UUIDField()
+    name = serializers.CharField()
+    logo = serializers.SerializerMethodField()
+
+    def get_logo(self, obj):
+        request = self.context.get('request')
+        if obj.logo and obj.logo.logo:
+            return request.build_absolute_uri(obj.logo.logo.url) if request else obj.logo.logo.url
+        return None
+
+def _resolve_result(status, result_team, result_challenged_team, is_our_team_first: bool) -> str | None:
+    status_map = {
+        ChallengeStatus.CANCELED:       'ملغى',
+        ChallengeStatus.NO_SHOW:        'لم يحضر',
+        ChallengeStatus.DISPUTED_SCORE: 'مشكلة في النتيجة',
+        ChallengeStatus.DISPUTED:       'مشكلة',
+    }
+    if status in status_map:
+        return status_map[status]
+
+    if result_team is None or result_challenged_team is None:
+        return 'قريبا'   # ← ACCEPTED but no scores yet
+
+    our_score, their_score = (
+        (result_team, result_challenged_team) if is_our_team_first
+        else (result_challenged_team, result_team)
+    )
+    if our_score > their_score: return 'فاز'
+    if our_score < their_score: return 'خسر'
+    return 'تعادل'
+
+
+class TeamChallengeSerializer(serializers.ModelSerializer):
+    """For team-scoped challenge list — perspective relative to the requested team."""
+    team            = TeamSnippetSerializer(read_only=True)
+    challenged_team = TeamSnippetSerializer(read_only=True)
+    team_side       = serializers.SerializerMethodField()  # 'team' | 'challenged_team'
+    result          = serializers.SerializerMethodField()  # 'won' | 'lost' | 'drawn'
+
+    class Meta:
+        model  = Challenge
+        fields = [
+            'id', 'date', 'start_time', 'end_time',
+            'result_team', 'result_challenged_team',
+            'team', 'challenged_team',
+            'team_side', 'result',
+        ]
+
+    def _team_id(self):
+        return str(self.context.get('team_id', ''))
+
+    def get_team_side(self, obj):
+        return 'team' if str(obj.team_id) == self._team_id() else 'challenged_team'
+
+    def get_result(self, obj):
+        return _resolve_result(
+            status                   = obj.status,
+            result_team              = obj.result_team,
+            result_challenged_team   = obj.result_challenged_team,
+            is_our_team_first        = str(obj.team_id) == self._team_id(),
+        )
+
+
+class PlayerChallengeListSerializer(serializers.Serializer):
+    """For player-scoped challenge list — perspective relative to the player's team side."""
+    id                     = serializers.UUIDField(source='challenge.id')
+    date                   = serializers.DateField(source='challenge.date')
+    start_time             = serializers.TimeField(source='challenge.start_time')
+    end_time               = serializers.TimeField(source='challenge.end_time')
+    result_team            = serializers.IntegerField(source='challenge.result_team',            allow_null=True)
+    result_challenged_team = serializers.IntegerField(source='challenge.result_challenged_team', allow_null=True)
+    team                   = serializers.SerializerMethodField()
+    challenged_team        = serializers.SerializerMethodField()
+    player_side            = serializers.SerializerMethodField()
+    result                 = serializers.SerializerMethodField()
+
+    def get_team(self, obj):
+        return TeamSnippetSerializer(obj.challenge.team, context=self.context).data
+
+    def get_challenged_team(self, obj):
+        return TeamSnippetSerializer(obj.challenge.challenged_team, context=self.context).data
+
+    def get_player_side(self, obj):
+        if obj.team_id == obj.challenge.team_id:
+            return 'team'
+        elif obj.team_id == obj.challenge.challenged_team_id:
+            return 'challenged_team'
+        return None
+
+    def get_result(self, obj):
+        return _resolve_result(
+            status                   = obj.challenge.status,
+            result_team              = obj.challenge.result_team,
+            result_challenged_team   = obj.challenge.result_challenged_team,
+            is_our_team_first        = obj.team_id == obj.challenge.team_id,
+        )
 
 class PitchSerializer(serializers.Serializer):
     id   = serializers.UUIDField(read_only=True)
@@ -277,7 +376,6 @@ class PlayerProfileSerializer(serializers.ModelSerializer):
             'weight',
             'foot_preference',
             'booking_time',
-            'cancel_time',
             'challenge_time',
             'negative_time',
             'challenges',

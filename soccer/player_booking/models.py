@@ -121,6 +121,7 @@ class Booking(models.Model):
         verbose_name_plural = _('Bookings')
         ordering = ['-created_at']
         indexes = [
+            models.Index(fields=['player_id', 'created_at']),
             models.Index(fields=['pitch', 'date']),
             models.Index(fields=['pitch', 'date','start_time']),
             models.Index(fields=['player']),

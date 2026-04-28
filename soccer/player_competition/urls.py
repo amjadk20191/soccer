@@ -1,10 +1,17 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ChallengeDetailView, TeamDetailView, PlayerProfileView, SentChallengeListView, ChallengeCancelView, ChallengeTeamsView, CreateChallengeAPIView, PendingChallengeListView, ChallengeReplyView
+from .views import (TeamChallengesView, PlayerChallengesView, ChallengeDetailView, 
+                    TeamDetailView, PlayerProfileView, SentChallengeListView, 
+                    ChallengeCancelView, ChallengeTeamsView, CreateChallengeAPIView, 
+                    PendingChallengeListView, ChallengeReplyView, ChallengeResultChoicesView)
 
 router = DefaultRouter()
 
 urlpatterns = [
+    path('challenges/result-choices/', ChallengeResultChoicesView.as_view()),
+
+    path('teams_challenges/<uuid:team_id>/',     TeamChallengesView.as_view()),
+    path('players_challenges/<uuid:player_id>/', PlayerChallengesView.as_view()),
     path('team/<uuid:team_id>/', TeamDetailView.as_view(), name='team-detail'),
     path('teams/<uuid:team_id>/challenges/', ChallengeTeamsView.as_view()),
     path('create/', CreateChallengeAPIView.as_view(), name='create-challenge'),
