@@ -8,9 +8,27 @@ from .models import (Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment,
     ClubHourlyStatistics,
     ClubEquipmentStatistics,
     ClubOpeningTimeHistory,
-    ClubStaff
+    ClubStaff,
+    ClubDeposit
 )
 from django.utils.html import mark_safe
+
+
+
+@admin.register(ClubDeposit)
+class ClubDepositAdmin(admin.ModelAdmin):
+    list_display = ("id", "club", "deposit_percent")
+    list_filter = ("club",)
+    search_fields = ("club__name",)  # assumes Club has a 'name' field
+    readonly_fields = ("id",)
+
+    ordering = ("club",)
+
+    fieldsets = (
+        ("Basic Info", {
+            "fields": ("id", "club", "deposit_percent")
+        }),
+    )
 
 
 @admin.register(ClubStaff)

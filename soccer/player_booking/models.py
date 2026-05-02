@@ -22,6 +22,7 @@ class BookingStatus(models.IntegerChoices):
     DISPUTED = 8, _('مشكلة')
     EXPIRED = 9, _('انتهت صلاحيته')
     CLOSED = 10, _('فترة مغلقة')
+    PAY = 11, _('الدفع عبر التطبيق')
 
 class PayStatus(models.IntegerChoices):
     LATER = 1, _('لاحقا')

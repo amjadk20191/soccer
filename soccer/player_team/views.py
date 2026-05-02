@@ -209,7 +209,7 @@ class InvitePlayerView(APIView):
         username = serializer.validated_data['username']
         
         # Invite player using service
-        TeamInvitationService.invite_player_to_team(
+        invite_request = TeamInvitationService.invite_player_to_team(
             captain_id=captain_id,
             team_id=team_id,
             username=username
@@ -217,7 +217,7 @@ class InvitePlayerView(APIView):
         
         
         return Response({
-            'message': f'Invitation sent to {username}'      
+            'invite_request': str(invite_request.id)      
               }, status=status.HTTP_201_CREATED)
 
 

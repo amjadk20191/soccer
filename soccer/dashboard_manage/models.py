@@ -11,6 +11,9 @@ from django.utils import timezone
 
 
 
+
+
+
 class Club(models.Model):
     """Football clubs/venues"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -92,10 +95,6 @@ class PitchTypes(models.IntegerChoices):
     Ground = 3, _('زفت')
     earthy = 4, _('أرضي')
     
-
-
-
-
 class Pitch(models.Model):
     """Football pitches within clubs"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -135,16 +134,11 @@ class ReservationTypeHoure(models.Model):
         ]
 
 
-
-
 class Equipment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=300, blank=True)
     image = models.ImageField(upload_to=upload_to_model_name, validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png", "webp"], message="Only JPG, JPEG, PNG, and WEBP images are allowed." )])
-
-
-
 
 class ClubEquipment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
@@ -165,8 +159,6 @@ class ClubEquipment(models.Model):
                 name="uniq_club_equipment"
             )
         ]
-
-
 
 
 class BookingPriceStatistics(models.Model):
@@ -195,6 +187,7 @@ class BookingNumStatistics(models.Model):
     canceled_num_from_completed_player = models.PositiveSmallIntegerField(default=0)
     reject_num = models.PositiveSmallIntegerField(default=0)
     pending_pay_num = models.PositiveSmallIntegerField(default=0)
+    pay_num = models.PositiveSmallIntegerField(default=0)
     pending_pay_num_owner = models.PositiveSmallIntegerField(default=0)
     pending_player_num = models.PositiveSmallIntegerField(default=0)
     no_Show_num = models.PositiveSmallIntegerField(default=0)
@@ -231,10 +224,20 @@ class ClubEquipmentStatistics(models.Model):
         unique_together = ("club", "club_equipment", "date") 
 
 
-
-
-
-class BookingDuration (models.Model):
+class BookingDuration(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
     duration = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+
+
+
+
+class ClubDeposit(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    club = models.ForeignKey(Club, on_delete=models.CASCADE)
+    deposit_percent = models.DecimalField(
+        max_digits=6, 
+        decimal_places=3,
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+

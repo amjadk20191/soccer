@@ -32,12 +32,13 @@ ARABIC_STATUS_MAP: dict[str, StatusFilter] = {
     'وقت_مقترح_جديد':                            ([BookingStatus.PENDING_PLAYER],  []),
     'مشكلة_في_النتيجة':                          ([],                              [ChallengeStatus.DISPUTED_SCORE]),
     'بانتظار_الفريق_المنافس':                    ([],                              [ChallengeStatus.PENDING_TEAM]),
-    'بانتظار_الدفع':                             ([BookingStatus.PENDING_PAY],     [ChallengeStatus.PENDING_PAY]),
+    'بانتظار_تكملة_الدفع':                       ([BookingStatus.PENDING_PAY],     [ChallengeStatus.PENDING_PAY]),
     'مكتمل':                                     ([BookingStatus.COMPLETED],       [ChallengeStatus.ACCEPTED]),
     'ملغى':                                      ([BookingStatus.CANCELED],        [ChallengeStatus.CANCELED]),
     'لم_تحضر':                                   ([BookingStatus.NO_SHOW],         [ChallengeStatus.NO_SHOW]),
     'مشكلة':                                     ([BookingStatus.DISPUTED],        [ChallengeStatus.DISPUTED]),
     'انتهت_صلاحيته':                             ([BookingStatus.EXPIRED],         [ChallengeStatus.EXPIRED]),
+    'بانتظار_الدفع':                             ([BookingStatus.PAY],         [ChallengeStatus.PAY]),
 }
 
 
@@ -59,7 +60,7 @@ VALID_ARABIC_STATUSES: list[str] = list(ARABIC_STATUS_MAP.keys())
 
 
 _NO_FILTER_CHALLENGE_STATUSES = [ChallengeStatus.PENDING_TEAM, ChallengeStatus.DISPUTED_SCORE, 
-                                ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, 
+                                ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, 
                                 ChallengeStatus.ACCEPTED, ChallengeStatus.CANCELED,
                                 ChallengeStatus.NO_SHOW, ChallengeStatus.DISPUTED, ChallengeStatus.EXPIRED]
 
@@ -105,20 +106,21 @@ def _build_sql(
             c.created_at
         FROM {_TC} c
         WHERE c.status IN ({_ph(len(challenge_statuses))})
-          AND (
-              EXISTS (
-                  SELECT 1 FROM {_TM} tm
-                  WHERE  tm.team_id   = c.team_id
-                  AND    tm.player_id = %s
-                  AND    tm.status    = %s
-              )
-              OR EXISTS (
-                  SELECT 1 FROM {_TM} tm
-                  WHERE  tm.team_id   = c.challenged_team_id
-                  AND    tm.player_id = %s
-                  AND    tm.status    = %s
-              )
-          )
+        AND c.booking_id IS NULL                          -- ← exclude if booking exists
+        AND (
+            EXISTS (
+                SELECT 1 FROM {_TM} tm
+                WHERE  tm.team_id   = c.team_id
+                AND    tm.player_id = %s
+                AND    tm.status    = %s
+            )
+            OR EXISTS (
+                SELECT 1 FROM {_TM} tm
+                WHERE  tm.team_id   = c.challenged_team_id
+                AND    tm.player_id = %s
+                AND    tm.status    = %s
+            )
+        )
     """ if include_challenges else None
 
     branches = ' UNION ALL '.join(b for b in [booking_branch, challenge_branch] if b is not None)
@@ -250,14 +252,14 @@ def _normalize(row: dict) -> UserBookingItem:
             pitch_name             = row['pitch_name'],
             club_id                = row['club_id'],
             club_name              = row['club_name'],
-            challenge_id           = row['challenge_id'],
+            challenge_id           = uuid.UUID(row['challenge_id'])    if row['challenge_id']    else None,
             challenge_status       = row['challenge_status'],
             result_team            = row['result_team'],
             result_challenged_team = row['result_challenged_team'],
-            team_id                = row['team_id'],
+            team_id                = uuid.UUID(row['team_id'])         if row['team_id']         else None,
             team_name              = row['team_name'],
             team_logo              = row['team_logo'],
-            challenged_team_id     = row['challenged_team_id'],
+            challenged_team_id     = uuid.UUID(row['challenged_team_id']) if row['challenged_team_id'] else None,
             challenged_team_name   = row['challenged_team_name'],
             challenged_team_logo   = row['challenged_team_logo'],
             total_count            = row['total_count'],
@@ -275,14 +277,14 @@ def _normalize(row: dict) -> UserBookingItem:
         pitch_name             = row['pc_pitch_name'],
         club_id                = row['pc_club_id'],
         club_name              = row['pc_club_name'],
-        challenge_id           = row['pc_id'],
+        challenge_id           = uuid.UUID(row['pc_id']),  # ← was raw string
         challenge_status       = row['pc_status'],
         result_team            = row['pc_result_team'],
         result_challenged_team = row['pc_result_challenged_team'],
-        team_id                = row['pc_team_id'],
+        team_id                = uuid.UUID(row['pc_team_id'])          if row['pc_team_id']          else None,
         team_name              = row['pc_team_name'],
         team_logo              = row['pc_team_logo'],
-        challenged_team_id     = row['pc_challenged_team_id'],
+        challenged_team_id     = uuid.UUID(row['pc_challenged_team_id']) if row['pc_challenged_team_id'] else None,
         challenged_team_name   = row['pc_challenged_team_name'],
         challenged_team_logo   = row['pc_challenged_team_logo'],
         total_count            = row['total_count'],

@@ -96,14 +96,22 @@ class TeamDetailView(generics.RetrieveAPIView):
         )
     
 class PlayerProfileView(generics.RetrieveAPIView):
-    serializer_class   = PlayerProfileSerializer
+    serializer_class = PlayerProfileSerializer
 
     def get_object(self):
-        return PlayerProfileService.get_player_profile(
-            player_id=self.kwargs['player_id']
+        team_id = self.request.query_params.get('team_id') or None
+        player, team_context = PlayerProfileService.get_player_profile(
+            player_id=self.kwargs['player_id'],
+            team_id=team_id,
         )
+        # stash so get_serializer_context can pick it up
+        self._team_context = team_context
+        return player
 
-
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx.update(getattr(self, '_team_context', {'in_team': None, 'request_id': None}))
+        return ctx
 
 
 class ChallengeTeamsView(ListAPIView):

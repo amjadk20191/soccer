@@ -102,6 +102,9 @@ def _num_deltas(status, by_owner, multiplier=1):
     elif status == S.PENDING_PLAYER:
         inc("pending_player_num")
 
+    elif status == S.PAY:
+        inc("pay_num")
+
     elif status == S.REJECT:
         inc("reject_num")
 

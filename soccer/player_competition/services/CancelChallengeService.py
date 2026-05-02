@@ -10,7 +10,7 @@ class CancelChallengeService:
     Rules:
       - Only the captain of `challenge.team` can cancel.
       - Only challenges still in a cancelable state can be cancelled.
-      - Once ACCEPTED or beyond (PENDING_PAY etc.), cancellation is blocked.
+      - Once ACCEPTED or beyond (PAY etc.), cancellation is blocked.
 
     DB hits: 2
       1. Single fetch — existence + ownership check in one query

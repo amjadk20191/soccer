@@ -20,8 +20,14 @@ class GetSentChallengesService:
     VISIBLE_STATUSES = [
         ChallengeStatus.PENDING_TEAM,
         ChallengeStatus.PENDING_OWNER,
+        ChallengeStatus.PAY,
         ChallengeStatus.PENDING_PAY,
         ChallengeStatus.ACCEPTED,
+        ChallengeStatus.NO_SHOW,
+        ChallengeStatus.DISPUTED_SCORE,
+        ChallengeStatus.DISPUTED,
+
+
     ]
 
 

@@ -34,7 +34,7 @@ class ChallengeDetailService:
             .prefetch_related(players_prefetch)
             .only(
                 'id', 'date',
-                'start_time', 'end_time',
+                'start_time', 'end_time', 'created_at',
                 'result_team', 'result_challenged_team',
                 'team_id', 'team__name', 'team__logo__logo',
                 'challenged_team_id', 'challenged_team__name', 'challenged_team__logo__logo',

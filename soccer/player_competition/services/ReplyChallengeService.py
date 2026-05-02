@@ -116,7 +116,7 @@ class ReplyChallengeService:
                     challenged_team__teammember__status=MemberStatus.ACTIVE,
                 ),
                 date=challenge.date,
-                status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.ACCEPTED],
+                status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, ChallengeStatus.ACCEPTED],
                 start_time__lt=challenge.end_time,
                 end_time__gt=challenge.start_time,
             ).exists()
@@ -133,6 +133,9 @@ class ReplyChallengeService:
                 pitch, challenge.club_id, challenge.date,
                 challenge.start_time, challenge.end_time,
             )
+            payment_status = PayStatus.ONLINE
+            if not challenge.deposit_percent == 1:
+                payment_status = PayStatus.DEPOSIT
 
             booking = Booking.objects.create(
                 player_id      = captain_id,           # sender's captain — from memory
@@ -143,10 +146,12 @@ class ReplyChallengeService:
                 end_time       = challenge.end_time,
                 price          = price,
                 final_price    = price,
+                deposit        = price * challenge.deposit_percent,
                 status         = BookingStatus.PENDING_MANAGER,
-                payment_status = PayStatus.UNKNOWN,
+                payment_status = payment_status,
                 is_challenge   = True,
                 by_owner       = False,
+
             )
             # ── Query 6: convert challenge equipments → booking equipments ─
             final_price_with_equipments = CreateChallengeService.convert_to_booking_equipments(
@@ -156,7 +161,12 @@ class ReplyChallengeService:
 
             if final_price_with_equipments is not None:
                 booking.final_price = final_price_with_equipments
-                booking.save(update_fields=['final_price', 'updated_at'])   # ── Query 7 (conditional)
+                update_fields = ['final_price', 'updated_at']
+                if not challenge.deposit_percent == 1:
+                    booking.deposit = final_price_with_equipments * challenge.deposit_percent
+                    update_fields.append('deposit')
+
+                booking.save(update_fields=update_fields)   # ── Query 7 (conditional)
 
             # ── Query 7/8: link booking back to challenge ──────────────────
 

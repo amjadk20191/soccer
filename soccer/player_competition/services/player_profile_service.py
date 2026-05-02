@@ -5,13 +5,15 @@ from rest_framework.exceptions import NotFound
 from player_competition.models import ChallengePlayerBooking, Challenge, ChallengeStatus
 from django.contrib.auth import get_user_model
 
+from player_team.models import MemberStatus, Request, TeamMember
+
 User = get_user_model()
 
 
 class PlayerProfileService:
 
     @staticmethod
-    def get_player_profile(player_id: str):
+    def get_player_profile(player_id: str, team_id: str = None):
 
         played_challenges_prefetch = Prefetch(
             'challengeplayerbooking_set',
@@ -35,9 +37,7 @@ class PlayerProfileService:
                     'challenge__challenged_team__name',
                     'challenge__challenged_team__logo__logo',
                 )
-                .filter(
-                    challenge__status=ChallengeStatus.ACCEPTED  # only finished challenges
-                )
+                .filter(challenge__status=ChallengeStatus.ACCEPTED)
                 .order_by('-challenge__date')[:3],
             to_attr='played_challenges',
         )
@@ -57,6 +57,32 @@ class PlayerProfileService:
 
         if not player:
             raise NotFound({"error": "اللاعب غير موجود."})
-        print(player)
 
-        return player
+        # --- optional team context (2 lean queries, only when team_id supplied) ---
+        team_context = {'in_team': None, 'request_id': None}
+
+        if team_id:
+            in_team = TeamMember.objects.filter(
+                team_id=team_id,
+                player_id=player_id,
+                status__in=[MemberStatus.ACTIVE, MemberStatus.INACTIVE],
+            ).exists()
+
+            pending_id = (
+                Request.objects
+                .filter(
+                    team_id=team_id,
+                    player_id=player_id,
+                    status=1,       #Pending
+                    recruitment_post__isnull=True,
+                )
+                .values_list('id', flat=True)
+                .first()
+            )
+
+            team_context = {
+                'in_team': in_team,
+                'request_id': str(pending_id) if pending_id else None,
+            }
+
+        return player, team_context

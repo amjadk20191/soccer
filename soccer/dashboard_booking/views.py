@@ -161,12 +161,12 @@ class BookingViewSet(viewsets.ModelViewSet):
 
         return Response({
             BookingStatus.PENDING_MANAGER.name: [
-                (BookingStatus.PENDING_PAY.name, BookingStatus.PENDING_PAY.value),
+                (BookingStatus.PAY.name, BookingStatus.PAY.value),
                 (BookingStatus.REJECT.name, BookingStatus.REJECT.value),
                 (BookingStatus.PENDING_PLAYER.name, BookingStatus.PENDING_PLAYER.value),
             ], 
             BookingStatus.COMPLETED.name:[
-                # (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
+                (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
                 # (BookingStatus.NO_SHOW.name, BookingStatus.NO_SHOW.value),
                 (BookingStatus.CANCELED.name, BookingStatus.CANCELED.value),
             ],

@@ -7,12 +7,13 @@ from .views import (UserBookingListView, BookingPriceForUserAPIView,
 from .views import (BookingPriceForUserAPIView, EquipmentAvailabilityForUserView, 
                     ConsolidatedBookingListViewAlt, ActiveClubListAPIView, 
                     ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub, 
-                    CouponCreateView, PitchSearchView, StatusKeysForUserBookingListAPIView)
+                    CouponCreateView, PitchSearchView, StatusKeysForUserBookingListAPIView, ShowBookingDepositForClub)
 
 
 urlpatterns = [
     path('club-opening-prices/', ClubOpeningPrices, name="club-opening-prices"),
     path("booking-duration/<uuid:club_id>/", ShowBookingDurationForClub.as_view(), name="booking-duration"),
+    path("booking-deposit/<uuid:club_id>/", ShowBookingDepositForClub.as_view(), name="booking-deposit"),
     path("consolidated-booking/", ConsolidatedBookingListViewAlt.as_view(), name="consolidated-booking"),
     path("clubs/", ActiveClubListAPIView.as_view(), name="active-club-list"),
     path("make-booking/", BookingCreateForUser.as_view(), name="make_booking_by_user"),

@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (ClubEquipmentGenericsList, ClubManagerView, WeekdayPricingViewSet, DatePricingViewSet, PitchViewSet, EquipmentGenericsList,
-                    RevenueReportView, BookingCountsReportView, HourlyUtilisationReportView, 
+                    RevenueReportView, BookingCountsReportView, HourlyUtilisationReportView, ClubDepositViewSet,
                     EquipmentSalesReportView, BookingDurationViewSet,  GetPitchesTypesView)
 router = DefaultRouter()
 
@@ -10,6 +10,7 @@ router.register(r'pricing/date', DatePricingViewSet, basename='pricing-date')
 router.register(r'pitches', PitchViewSet, basename='pitch')
 router.register(r'equipment', ClubEquipmentGenericsList, basename='equipment')
 router.register(r'booking-duration', BookingDurationViewSet, basename='booking-duration')
+router.register(r'club-deposit', ClubDepositViewSet, basename='club-deposit')
 
 urlpatterns = [
     path('manager-club/', ClubManagerView.as_view(), name='manager-club'),

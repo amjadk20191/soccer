@@ -5,7 +5,7 @@ from soccer.enm import BOOKING_STATUS_DENIED
 from rest_framework import status
 from dashboard_booking.services.PricingService import PricingService
 from urllib import request
-from dashboard_manage.models import Club, BookingDuration, Pitch
+from dashboard_manage.models import Club, BookingDuration, ClubDeposit, Pitch
 from django.db.models import Prefetch
 from management.models import Feature
 from .serializers import BookingDetailSerializer, UserBookingSerializer, BookingPriceRequestForUserSerializer, EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer
@@ -219,6 +219,13 @@ class ShowBookingDurationForClub(APIView):
 
         return Response(duration)
 
+
+class ShowBookingDepositForClub(APIView):
+    
+    def get(self, request, club_id):
+        duration = ClubDeposit.objects.values("deposit_percent", "id").filter(club_id=club_id)
+
+        return Response(duration)
 # class PitchSearchView(APIView):
 
 #     def post(self, request):

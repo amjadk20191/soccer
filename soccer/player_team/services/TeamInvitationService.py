@@ -319,25 +319,26 @@ class TeamInvitationService:
         )
 
         # 3. Third Query: Get IDs of users with pending requests
-        pending_ids = set(
+        pending_requests = dict(
             Request.objects.filter(
                 player_id__in=user_ids,
                 team_id=current_team,
                 status=1  # Pending
-            ).values_list('player_id', flat=True)
+            ).values_list('player_id', 'id')
         )
-
         # Final Step: Map the statuses back to the user dictionaries (Python logic)
         for user in users:
             if user['id'] in member_ids:
                 user['connection_status'] = 'in_team'
-            elif user['id'] in pending_ids:
+                user['request_id'] = None
+            elif user['id'] in pending_requests:
                 user['connection_status'] = 'pending'
+                user['request_id'] = str(pending_requests[user['id']])  # UUID → string
             else:
                 user['connection_status'] = 'not'
-            # for user image
+                user['request_id'] = None
+
             if user['image']:
-                # print(settings.MEDIA_URL)
                 user['image'] = request.build_absolute_uri(settings.MEDIA_URL + user['image'])
             else:
                 user['image'] = None

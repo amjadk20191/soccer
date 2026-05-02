@@ -22,12 +22,12 @@ from dashboard_manage.models import (
 from collections import defaultdict
 
 
-from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration, PitchTypes
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration, PitchTypes, ClubDeposit
 from .serializers import (ClubManagerSerializer, WeekdayPricingSerializer,
                         DatePricingSerializer, PitchSerializer,
                         PitchListSerializer, PitchActivationSerializer,
                         ReadEquipmentSerializer, CreateClubEquipmentSerializer, 
-                        ShowClubEquipmentSerializer, BookingDurationSerializer)
+                        ShowClubEquipmentSerializer, BookingDurationSerializer, ClubDepositSerializer)
 
 class ClubManagerView(APIView):
 
@@ -84,6 +84,15 @@ class BookingDurationViewSet(viewsets.ModelViewSet):
     serializer_class = BookingDurationSerializer
     def get_queryset(self):
         return BookingDuration.objects.filter(
+            club_id=self.request.user.club, 
+        )
+
+
+
+class ClubDepositViewSet(viewsets.ModelViewSet):
+    serializer_class = ClubDepositSerializer
+    def get_queryset(self):
+        return ClubDeposit.objects.filter(
             club_id=self.request.user.club, 
         )
 
@@ -159,6 +168,7 @@ class PitchViewSet(viewsets.ModelViewSet):
         
         if Booking.objects.filter(pitch=instance, status__in=[
             BookingStatus.PENDING_MANAGER,
+            BookingStatus.PAY,
             BookingStatus.PENDING_PAY,
             BookingStatus.COMPLETED
         ]).filter(
@@ -393,6 +403,7 @@ class BookingCountsReportView(APIView):
                 canceled_pending_owner=Sum("canceled_num_from_pending_pay_owner"),
                 canceled_pending_player=Sum("canceled_num_from_pending_pay_player"),
                 pending_pay_num_player=Sum("pending_pay_num"), # from player
+                pay_num=Sum("pay_num"),
                 pending_pay_num_owner=Sum("pending_pay_num_owner"),
                 pending_player_num=Sum("pending_player_num"),
                 reject_num=Sum("reject_num"),
@@ -439,6 +450,7 @@ class BookingCountsReportView(APIView):
                 "no_show":        _int(agg["no_show_num"]),
                 "disputed":       _int(agg["disputed_num"]),
                 "expired":        _int(agg["expired_num"]),
+                "pay_num":        _int(agg["pay_num"]),
             },
         })
 

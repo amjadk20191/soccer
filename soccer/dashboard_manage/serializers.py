@@ -1,6 +1,20 @@
 from rest_framework import serializers
-from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration
+from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration, ClubDeposit
 from .services import EquipmentManageService
+
+
+class ClubDepositSerializer(serializers.ModelSerializer):
+    class Meta:
+            model = ClubDeposit
+            fields = ['id', 'deposit_percent']
+
+    def create(self, validated_data):
+        validated_data["club_id"]=self.context['request'].auth.get('club_id')
+        duration_exist = ClubDeposit.objects.filter(club_id=validated_data["club_id"] ,duration=validated_data["deposit_percent"]).exists()
+        if duration_exist:
+            raise serializers.ValidationError({"error": "النسبة المحددة موجودة بالفعل."})
+
+        return super().create(validated_data)
 
 
 class BookingDurationSerializer(serializers.ModelSerializer):
@@ -26,6 +40,7 @@ class BookingDurationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"error": "المدة المحددة موجودة بالفعل."})
 
         return super().create(validated_data)
+    
 
 
 class CreateClubEquipmentSerializer(serializers.ModelSerializer):

@@ -22,6 +22,8 @@ class ChallengeStatus(models.IntegerChoices):
     DISPUTED_SCORE = 8, _('مشكلة في النتيجة')
     DISPUTED = 9, _('مشكلة')
     EXPIRED = 10, _('انتهت صلاحيته')
+    PAY = 11, _('الدفع عبر التطبيق')
+
 
 
 class Challenge(models.Model):
@@ -40,6 +42,12 @@ class Challenge(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     date = models.DateField()
+    deposit_percent = models.DecimalField(
+        max_digits=6, 
+        decimal_places=3,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        default=1
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -59,7 +67,7 @@ class Challenge(models.Model):
     
 
 # this table for save players who played the game (booking/challenge)
-#this instert happen after convert booking status to PENDING_PAY
+#this instert happen after convert booking status to PAY
 class ChallengePlayerBooking(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE)

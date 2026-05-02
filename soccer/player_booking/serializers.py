@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from dashboard_manage.models import Club, ClubPricing, Pitch
+from dashboard_manage.models import Club, ClubPricing, Pitch, ClubDeposit
 from management.models import Feature
 from soccer.enm import BOOKING_STATUS_DENIED
 from  player_booking.models import Booking, BookingStatus, Coupon, PayStatus, BookingEquipment
@@ -380,10 +380,11 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
             'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
         }
     )
+    deposit = serializers.UUIDField(required=False)
 
     class Meta:
         model = Booking
-        fields = ['club', 'pitch', 'date', 'start_time', 'end_time', 'price', 'final_price', 'equipments', 'coupon_code']
+        fields = ['club', 'pitch', 'date', 'start_time', 'end_time', 'price', 'final_price', 'equipments', 'coupon_code', 'deposit']
         extra_kwargs = {
             'price': {
                 'read_only': True,
@@ -421,6 +422,8 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
                 }
             },
         }
+
+
 
     def validate_date(self, value):
         today = date.today()
@@ -479,6 +482,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
             BookingStatus.COMPLETED.value,
             BookingStatus.PENDING_PLAYER.value,
             BookingStatus.PENDING_MANAGER.value,
+            BookingStatus.PAY.value,
         ]
         ).filter(
             start_time__lt=end_time,
@@ -502,6 +506,11 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
         coupon_code = validated_data.pop('coupon_code', None) or None
         price = PricingService.calculate_final_price(validated_data['pitch'], club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
         equipments = validated_data.pop("equipments", [])
+        deposit = validated_data.pop("deposit", None)
+        payment_status = PayStatus.ONLINE
+        if deposit:
+            payment_status = PayStatus.DEPOSIT
+
 
         with transaction.atomic():
             booking = Booking.objects.create(
@@ -509,10 +518,11 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
                 player_id=user_id,
                 price=price,
                 final_price=price,
+                payment_status=payment_status,
                 **validated_data)
             current_final_price = booking.final_price
             if equipments:
-                final_price_with_equipments_ = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments, validated_data['start_time'],  validated_data['end_time'])
+                current_final_price = EquipmentBookingService.Create_Equipment_Booking(club_id, booking, equipments, validated_data['start_time'],  validated_data['end_time'])
             applied_coupon = None
             if coupon_code:
                 coupon_result = CouponService.apply_coupon(
@@ -524,12 +534,26 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
                 current_final_price = coupon_result['price']
                 applied_coupon = coupon_result['coupon']
   
-            booking.final_price=final_price_with_equipments_
+            booking.final_price=current_final_price
             booking._force_signals_update = booking.status==BookingStatus.COMPLETED
-            booking.save(update_fields=['final_price', 'updated_at'])
 
             if applied_coupon:
                 CouponService.redeem_coupon(applied_coupon, user=request_user)
+            
+            if deposit:
+                deposit_percent=ClubDeposit.objects.values('deposit_percent').filter(id=deposit, club_id=club_id).first()
+                if deposit_percent:
+                    deposit = deposit_percent['deposit_percent']*current_final_price
+                    booking.deposit = deposit
+
+                else:
+                    raise serializers.ValidationError({"error": "هناك مشكلة في الرعبون"})
+                
+                booking.save(update_fields=['final_price', 'updated_at', 'deposit'])
+
+
+                
+
         booking._applied_coupon_code = coupon_code
         return booking
 
@@ -607,6 +631,7 @@ class PitchSearchResultSerializer(serializers.ModelSerializer):
 
 class BookingPriceRequestForUserSerializer(serializers.ModelSerializer):
     equipments = EquipmentBookingSerializer(many=True, required=False)
+    coupon_code = serializers.CharField(required=False)
 
     class Meta:
         model = Booking

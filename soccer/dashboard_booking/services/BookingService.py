@@ -22,8 +22,8 @@ class BookingService:
             )
                 
         match status:
-            case BookingStatus.PENDING_PAY.value:
-                cls.convert_to_pending_pay(booking)
+            case BookingStatus.PAY.value:
+                cls.convert_to_pay(booking)
             case BookingStatus.REJECT.value:
                 cls.reject_booking(booking)
             case BookingStatus.DISPUTED.value:
@@ -39,8 +39,8 @@ class BookingService:
 
     @classmethod
     @transaction.atomic
-    def convert_to_pending_pay(cls, booking):
-        """Convert Pending_manager to Pending_pay"""
+    def convert_to_pay(cls, booking):
+        """Convert Pending_manager to pay"""
         if booking.status != BookingStatus.PENDING_MANAGER:
             raise  ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن تحويلها إلى معلقة بانتظار الدفع "})
         cls._check_if_has_overlap_booking(booking)
@@ -58,10 +58,10 @@ class BookingService:
             print("//////////////////////////////////////////////////////////////////")
 
             if challenge:
-                Challenge.objects.filter(id=challenge.id).update(status=ChallengeStatus.PENDING_PAY)
-                cls._seed_challenge_player_bookings(booking, challenge)
+                Challenge.objects.filter(id=challenge.id).update(status=ChallengeStatus.PAY)
+                # cls._seed_challenge_player_bookings(booking, challenge)
 
-        booking.status = BookingStatus.PENDING_PAY
+        booking.status = BookingStatus.PAY
         booking.save(update_fields=['status', 'updated_at'])
         return booking
     
@@ -85,9 +85,9 @@ class BookingService:
     def disputed_booking(cls, booking):
         """disputed booking (from Completed or Pending_pay)"""
         if not(
-            # booking.status == BookingStatus.COMPLETED or 
-            (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
-            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (تم انشاءها من قبل صاحب الملعب) يمكن إلغاؤها"})
+            booking.status == BookingStatus.COMPLETED or 
+            (booking.status == BookingStatus.PENDING_PAY)):
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع يمكن إلغاؤها"})
         
         booking.status = BookingStatus.DISPUTED
         booking.save(update_fields=['status', 'updated_at'])
@@ -97,7 +97,7 @@ class BookingService:
     @transaction.atomic
     def no_show_booking(cls, booking):
         """no_show booking (from Completed or Pending_pay)"""
-        if not(booking.by_owner and booking.status == BookingStatus.PENDING_PAY):
+        if not(booking.status == BookingStatus.PENDING_PAY):
             raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع  يمكن إلغاؤها"})
         
         booking.status = BookingStatus.NO_SHOW
@@ -108,7 +108,7 @@ class BookingService:
     @transaction.atomic
     def owner_canceled_booking(cls, booking):
         """CANCELED booking (from Completed or Pending_pay) by owner"""
-        if not(booking.status == BookingStatus.CLOSED or booking.status == BookingStatus.COMPLETED or (booking.by_owner and booking.status == BookingStatus.PENDING_PAY)):
+        if not(booking.status == BookingStatus.CLOSED or booking.status == BookingStatus.COMPLETED or booking.status == BookingStatus.PENDING_PAY):
             raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (تم انشاءها من قبل صاحب الملعب) او بانتظار اللاعب يمكن إلغاؤها"})
         
         if booking.is_challenge:
@@ -134,7 +134,7 @@ class BookingService:
     @transaction.atomic
     def convert_to_pending_player(cls, booking, club_id, new_date, new_start_time, new_end_time):
         """Convert Pending_manager to Pending_player and create notification"""
-        if booking.status != BookingStatus.PENDING_MANAGER and booking.is_challenge:
+        if booking.status != BookingStatus.PENDING_MANAGER or booking.is_challenge:
             raise ValidationError({"error": "فقط الحجوزات التي في حالة معلقة (من قبل المدير) يمكن تحويلها إلى معلقة (من قبل اللاعب)"})
         
         if not booking.player:

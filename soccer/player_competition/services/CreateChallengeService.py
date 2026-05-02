@@ -5,7 +5,7 @@ from django.conf import settings
 
 from ..models import Challenge, ChallengeStatus,ChallengeEquipment
 from player_team.models import Team, TeamMember, MemberStatus
-from dashboard_manage.models import Pitch
+from dashboard_manage.models import ClubDeposit, Pitch
 from rest_framework.exceptions import ValidationError
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
 
@@ -60,8 +60,16 @@ class CreateChallengeService:
         date               = validated_data["date"]
         start_time         = validated_data["start_time"]
         end_time           = validated_data["end_time"]
-
+        deposit            = validated_data.get("deposit",None)
+        deposit_percent    = 1
+        
+        if deposit:
+            deposit_percent = ClubDeposit.objects.values('deposit_percent').filter(id=deposit, club_id=club_id).first()['deposit_percent']
+            if not deposit_percent:
+                raise ValidationError({"error": "هناك مشكلة في الرعبون"})
+            
         # ── Query 1: fetch both teams + active-member count in one shot ────
+
         teams = (
             Team.objects
             .filter(
@@ -123,7 +131,7 @@ class CreateChallengeService:
                 challenged_team__teammember__status=MemberStatus.ACTIVE,
             ),
             date=date,
-            status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.ACCEPTED],
+            status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, ChallengeStatus.ACCEPTED],
             start_time__lt=end_time,
             end_time__gt=start_time,
         ).exists()
@@ -156,9 +164,9 @@ class CreateChallengeService:
             start_time=start_time,
             end_time=end_time,
             date=date,
+            deposit_percent=deposit_percent
         )
 
-        print(challenge)
         return challenge
 
 
