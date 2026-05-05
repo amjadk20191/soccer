@@ -241,11 +241,12 @@ class BookingViewSet(viewsets.ModelViewSet):
         try:
             booking = BookingService.convert_to_pending_player(
                 booking=booking,
-                club=club_id,
+                club_id=club_id,
                 new_date=serializer.validated_data['new_date'],
                 new_start_time=serializer.validated_data['new_start_time'],
                 new_end_time=serializer.validated_data['new_end_time']
             )
+            
             return Response({"status": "تم تغيير حالة الحجز الى حالة (بانتظار تاكيد اللاعب)", "id": booking.id})
         except ValueError as e:
             return Response(
