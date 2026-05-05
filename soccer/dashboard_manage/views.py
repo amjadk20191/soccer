@@ -84,7 +84,8 @@ class BookingDurationViewSet(viewsets.ModelViewSet):
     serializer_class = BookingDurationSerializer
     def get_queryset(self):
         return BookingDuration.objects.filter(
-            club_id=self.request.user.club, 
+            club_id=self.request.auth.get('club_id'), 
+            # club_id=self.request.user.club, 
         )
 
 
@@ -93,7 +94,8 @@ class ClubDepositViewSet(viewsets.ModelViewSet):
     serializer_class = ClubDepositSerializer
     def get_queryset(self):
         return ClubDeposit.objects.filter(
-            club_id=self.request.user.club, 
+            club_id=self.request.auth.get('club_id')
+            # club_id=self.request.user.club, 
         )
 
 
@@ -101,7 +103,7 @@ class _BasePricingViewSet(viewsets.ModelViewSet):
 
     def get_club(self):
         try:
-            return self.request.user.club 
+            return self.request.auth.get('club_id') 
         except AttributeError:
             raise exceptions.PermissionDenied(detail={"error": "المستخدم ليس مرتبطاً بفريق."})
 
@@ -170,7 +172,9 @@ class PitchViewSet(viewsets.ModelViewSet):
             BookingStatus.PENDING_MANAGER,
             BookingStatus.PAY,
             BookingStatus.PENDING_PAY,
-            BookingStatus.COMPLETED
+            BookingStatus.COMPLETED,
+            BookingStatus.CHECK_PAY,
+            BookingStatus.DISPUTED,
         ]).filter(
             Q(date__gt=today) |  # future days
             Q(date=today, end_time__gte=current_time)  # today but not finished yet
@@ -185,7 +189,7 @@ class PitchViewSet(viewsets.ModelViewSet):
         instance.save(update_fields=['is_deteted', 'is_active'])
 
         return Response(
-            {"detail": "Club equipment soft deleted successfully."},
+            {"detail": "تم الحذف"},
             status=status.HTTP_200_OK
         )
     @action(detail=True, methods=['patch'], url_path='set-active')

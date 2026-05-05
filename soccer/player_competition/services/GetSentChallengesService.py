@@ -26,6 +26,7 @@ class GetSentChallengesService:
         ChallengeStatus.NO_SHOW,
         ChallengeStatus.DISPUTED_SCORE,
         ChallengeStatus.DISPUTED,
+        ChallengeStatus.CHECK_PAY,
 
 
     ]

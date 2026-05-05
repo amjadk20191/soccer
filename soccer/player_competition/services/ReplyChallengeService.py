@@ -116,7 +116,7 @@ class ReplyChallengeService:
                     challenged_team__teammember__status=MemberStatus.ACTIVE,
                 ),
                 date=challenge.date,
-                status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, ChallengeStatus.ACCEPTED],
+                status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.CHECK_PAY, ChallengeStatus.PAY, ChallengeStatus.ACCEPTED, ChallengeStatus.DISPUTED],
                 start_time__lt=challenge.end_time,
                 end_time__gt=challenge.start_time,
             ).exists()
@@ -135,7 +135,7 @@ class ReplyChallengeService:
             )
             payment_status = PayStatus.ONLINE
             if not challenge.deposit_percent == 1:
-                payment_status = PayStatus.DEPOSIT
+                payment_status = PayStatus.DEPOSIT_ONLINE
 
             booking = Booking.objects.create(
                 player_id      = captain_id,           # sender's captain — from memory

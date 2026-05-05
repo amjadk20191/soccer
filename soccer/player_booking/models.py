@@ -12,24 +12,27 @@ from django.utils import timezone
 
 
 class BookingStatus(models.IntegerChoices):
-    PENDING_MANAGER = 1, _('بانتظار تاكيد المدير')
-    PENDING_PLAYER = 2, _('بانتظار تاكيد اللاعب')
-    PENDING_PAY = 3, _('بانتظار الدفع')
+    PENDING_MANAGER = 1, _('بانتظار_تأكيد_النادي')
+    PENDING_PLAYER = 2, _('وقت_مقترح_جديد')
+    PENDING_PAY = 3, _('بانتظار_تكملة_الدفع')
     COMPLETED = 4, _('مكتمل')
     CANCELED = 5, _('ملغى')
     REJECT = 6, _('مرفوض')
-    NO_SHOW = 7, _('لم يحضر')
+    NO_SHOW = 7, _('متغيب')
     DISPUTED = 8, _('مشكلة')
-    EXPIRED = 9, _('انتهت صلاحيته')
-    CLOSED = 10, _('فترة مغلقة')
-    PAY = 11, _('الدفع عبر التطبيق')
+    EXPIRED = 9, _('انتهت_صلاحيته')
+    CLOSED = 10, _('فترة_مغلقة')
+    PAY = 11, _('بانتظار_الدفع')
+    CHECK_PAY = 12, _('بانتظار_تأكبد_الدفع')
 
 class PayStatus(models.IntegerChoices):
     LATER = 1, _('لاحقا')
-    DEPOSIT = 2, _('دفعة مقدمة')
+    DEPOSIT_ONLINE = 6, _('دفعة مقدمة')
     ONLINE = 3, _('اونلاين')
     CASH = 4, _('نقدا')
     UNKNOWN = 5, _('غير معروف')
+    DEPOSIT_CASH = 2, _('دفعة مقدمة')
+
 
 class Coupon(models.Model):
     DISCOUNT_TYPE_CHOICES = [
@@ -107,6 +110,9 @@ class Booking(models.Model):
     phone_validator = RegexValidator(regex=r'^09\d{8}$', message=_('Phone number must start with "09" and contain exactly 10 digits (e.g., 0912345678).'))
     phone = models.CharField(validators=[phone_validator], max_length=10, null=True, blank=True, default=None)
     is_challenge = models.BooleanField(default=False)
+    owner_reminded = models.BooleanField(default=False)
+    rate_notified   = models.BooleanField(default=False)
+    pay_reminded    = models.BooleanField(default=False)
     coupon = models.ForeignKey(
         'Coupon',
         on_delete=models.SET_NULL,

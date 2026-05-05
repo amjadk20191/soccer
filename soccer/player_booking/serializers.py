@@ -3,7 +3,7 @@ from rest_framework import serializers
 from dashboard_manage.models import Club, ClubPricing, Pitch, ClubDeposit
 from management.models import Feature
 from soccer.enm import BOOKING_STATUS_DENIED
-from  player_booking.models import Booking, BookingStatus, Coupon, PayStatus, BookingEquipment
+from  player_booking.models import Booking, BookingStatus, Coupon, PayStatus, BookingEquipment,Review
 from django.db import transaction
 from django.conf import settings
 from datetime import date, timedelta
@@ -13,6 +13,8 @@ from dashboard_booking.services.EquipmentBookingService import EquipmentBookingS
 from datetime import datetime
 from player_competition.models import Challenge
 from itertools import groupby
+from player_competition.models import ChallengePlayerBooking
+from soccer.settings import MEDIA_URL
 
 from .services.BookingHistoryService import UserBookingItem
 
@@ -88,6 +90,7 @@ class BookingEquipmentSerializer(serializers.Serializer):
     description = serializers.CharField(source="equipment_def.description")
     image = serializers.SerializerMethodField()
     quantity = serializers.IntegerField()
+    price = serializers.FloatField()
 
     def get_image(self, obj):
         request = self.context.get("request")
@@ -100,8 +103,9 @@ class BookingEquipmentSerializer(serializers.Serializer):
 
 
 class BookingDetailSerializer(serializers.ModelSerializer):
-    status_display         = serializers.CharField(source='get_status_display',         read_only=True)
-    payment_status = serializers.CharField(source='get_payment_status_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display',         read_only=True)
+    # payment_status = serializers.CharField(source='get_payment_status_display', read_only=True)
+    payment_status = serializers.SerializerMethodField()
     pitch          = PitchInBookingSerializer(read_only=True)
     club           = ClubInBookingSerializer(read_only=True)
     challenge      = serializers.SerializerMethodField()
@@ -111,6 +115,7 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         read_only=True
     )
     is_coupon = serializers.SerializerMethodField()
+    coupon    = serializers.SerializerMethodField()
     
     class Meta:
         model  = Booking
@@ -131,6 +136,7 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'challenge',
             'equipment',
             'is_coupon',
+            'coupon',
             'created_at'
         ]
 
@@ -147,10 +153,23 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         context = {**self.context, 'team_players': team_players}
         return ChallengeDetailSerializer(challenges[0], context=context).data
 
-    def get_is_coupon(self, obj):
+    def get_is_coupon(self, obj):           # ← add this
         return obj.coupon_id is not None
+    
+    def get_coupon(self, obj):
+        if not obj.coupon_id:
+            return None
+        return {
+            'code':           obj.coupon.code,
+            'discount_type':  obj.coupon.discount_type,
+            'discount_value': obj.coupon.discount_value,
+        }
 
 
+    def get_payment_status(self, obj):
+        if obj.payment_status == PayStatus.UNKNOWN:
+            return None
+        return obj.get_payment_status_display()
 
 class ChallengeResultSerializer(serializers.ModelSerializer):
     team             = TeamInChallengeSerializer(read_only=True)
@@ -184,6 +203,7 @@ class UserBookingSerializer(serializers.Serializer):
     club_name      = serializers.CharField(allow_null=True)
     challenge      = serializers.SerializerMethodField()
     is_booking     = serializers.SerializerMethodField() 
+
     def get_status_display(self, obj: UserBookingItem):
         return obj.get_status_display()
 
@@ -195,7 +215,7 @@ class UserBookingSerializer(serializers.Serializer):
         def logo_url(path):
             if not path:
                 return None
-            return request.build_absolute_uri(f'/media/{path}') if request else f'/media/{path}'
+            return request.build_absolute_uri(MEDIA_URL+f'{path}')
 
         return {
             'id':                     obj.challenge_id,
@@ -215,6 +235,7 @@ class UserBookingSerializer(serializers.Serializer):
         }    
     def get_is_booking(self, obj: UserBookingItem) -> bool:
         return obj.entry_type == 'booking'
+
 
 class ConsolidatedBookingQuerySerializer(serializers.Serializer):
     """Validates query parameters for consolidated booking endpoint"""
@@ -483,6 +504,8 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
             BookingStatus.PENDING_PLAYER.value,
             BookingStatus.PENDING_MANAGER.value,
             BookingStatus.PAY.value,
+            BookingStatus.CHECK_PAY.value,
+            BookingStatus.DISPUTED.value,
         ]
         ).filter(
             start_time__lt=end_time,
@@ -509,7 +532,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
         deposit = validated_data.pop("deposit", None)
         payment_status = PayStatus.ONLINE
         if deposit:
-            payment_status = PayStatus.DEPOSIT
+            payment_status = PayStatus.DEPOSIT_ONLINE
 
 
         with transaction.atomic():
@@ -539,7 +562,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
 
             if applied_coupon:
                 CouponService.redeem_coupon(applied_coupon, user=request_user)
-            
+                booking.coupon = applied_coupon
             if deposit:
                 deposit_percent=ClubDeposit.objects.values('deposit_percent').filter(id=deposit, club_id=club_id).first()
                 if deposit_percent:
@@ -548,8 +571,9 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
 
                 else:
                     raise serializers.ValidationError({"error": "هناك مشكلة في الرعبون"})
-                
-                booking.save(update_fields=['final_price', 'updated_at', 'deposit'])
+                booking.save(update_fields=['final_price', 'updated_at', 'deposit', 'coupon'])
+            else:
+                booking.save(update_fields=['final_price', 'updated_at', 'deposit', 'coupon'])
 
 
                 
@@ -629,9 +653,77 @@ class PitchSearchResultSerializer(serializers.ModelSerializer):
     #     return round(getattr(obj, 'distance_km', 0), 2)    
 
 
+# add to player_booking/serializers.py
+
+
+
+class ReviewCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = Review
+        fields = ['booking', 'rating', 'comment']
+
+    def validate(self, attrs):
+        booking = attrs['booking']
+        player  = self.context['request'].user
+
+        # check booking belongs to this player or they played in the challenge
+        if not booking.is_challenge:
+            if booking.player != player:
+                raise serializers.ValidationError('هذا الحجز لا يخصك.')
+        else:
+            
+            played = ChallengePlayerBooking.objects.filter(
+                booking=booking,
+                player=player
+            ).exists()
+            if not played:
+                raise serializers.ValidationError('لم تشارك في هذه المباراة.')
+
+        # check already rated
+        already_rated = Review.objects.filter(
+            booking=booking,
+            player=player
+        ).exists()
+        if already_rated:
+            raise serializers.ValidationError('لقد قمت بتقييم هذا الحجز مسبقاً.')
+
+        # check booking is completed
+        from player_booking.models import BookingStatus
+        if booking.status != BookingStatus.COMPLETED:
+            raise serializers.ValidationError('لا يمكن تقييم حجز غير مكتمل.')
+
+        return attrs
+
+    def create(self, validated_data):
+        booking = validated_data['booking']
+        player  = self.context['request'].user
+
+        return Review.objects.create(
+            booking=booking,
+            club=booking.club,
+            player=player,
+            rating=validated_data['rating'],
+            comment=validated_data.get('comment', ''),
+        )
+
+
+class ReviewListSerializer(serializers.ModelSerializer):
+    player_name = serializers.CharField(source='player.full_name', read_only=True)
+
+    class Meta:
+        model  = Review
+        fields = [
+            'id',
+            'rating',
+            'comment',
+            'player_name',
+            'created_at',
+        ]
+
+
 class BookingPriceRequestForUserSerializer(serializers.ModelSerializer):
     equipments = EquipmentBookingSerializer(many=True, required=False)
-    coupon_code = serializers.CharField(required=False)
+    coupon_code = serializers.CharField(required=False, allow_null=True, allow_blank=True)  # Add this
 
     class Meta:
         model = Booking

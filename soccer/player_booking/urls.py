@@ -1,13 +1,11 @@
 from django.urls import path
 
-from .views import (UserBookingListView, BookingPriceForUserAPIView, 
-                    EquipmentAvailabilityForUserView, ConsolidatedBookingListViewAlt, 
-                    ActiveClubListAPIView, ClubOpeningPrices, BookingCreateForUser, 
-                    ShowBookingDurationForClub, UserBookingDetailView)
 from .views import (BookingPriceForUserAPIView, EquipmentAvailabilityForUserView, 
                     ConsolidatedBookingListViewAlt, ActiveClubListAPIView, 
                     ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub, 
-                    CouponCreateView, PitchSearchView, StatusKeysForUserBookingListAPIView, ShowBookingDepositForClub)
+                    CouponCreateView, PitchSearchView,
+                    # BookingStatusListView, 
+                    ClubReviewListView, StatusKeysForUserBookingListAPIView, ShowBookingDepositForClub, ReviewCreateView, UserBookingListView, UserBookingDetailView)
 
 
 urlpatterns = [
@@ -21,6 +19,9 @@ urlpatterns = [
     path('calculate-price/', BookingPriceForUserAPIView.as_view(), name='booking-price'),
     path('mybooking/', UserBookingListView.as_view(), name='user-bookings'),
     path('my/<uuid:booking_id>/', UserBookingDetailView.as_view(), name='user-booking-detail'),
+    # path('booking-status/', BookingStatusListView.as_view(), name='Booking Status'),
+    path('reviews/create/', ReviewCreateView.as_view()),
+    path('reviews/club/<uuid:club_id>/', ClubReviewListView.as_view()),
     # path('booking-status/', BookingStatusListView.as_view(), name='Booking Status'),
     path('booking-status/', StatusKeysForUserBookingListAPIView.as_view(), name='Booking Status'),
 

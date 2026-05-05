@@ -1,61 +1,46 @@
-
 from django.db.models import F, Q
-from rest_framework.exceptions import NotFound, ValidationError
-
+from django.utils import timezone
 from player_competition.models import ChallengePlayerBooking, ChallengeStatus
 
-
 PAST_CHALLENGE_STATUSES = [
-    
     ChallengeStatus.ACCEPTED,
-    ChallengeStatus.CANCELED,
-    ChallengeStatus.NO_SHOW,
-    ChallengeStatus.DISPUTED_SCORE,
-    ChallengeStatus.DISPUTED,
 ]
 
-# Result-based filters (require scores to exist)
+def _is_played(time, date):
+    return Q(challenge__date__lt=date) | Q(challenge__date=date, challenge__end_time__lte=time)
+
+def _is_upcoming(time, date):
+    return Q(challenge__date__gt=date) | Q(challenge__date=date, challenge__start_time__gt=time)
 
 PLAYER_RESULT_FILTERS = {
-    'فاز': (
-        Q(challenge__result_team__isnull=False, challenge__result_challenged_team__isnull=False) & (
+    'فوز': lambda time, date: (
+        _is_played(time, date) & (
             Q(team_id=F('challenge__team_id'),            challenge__result_team__gt=F('challenge__result_challenged_team')) |
             Q(team_id=F('challenge__challenged_team_id'), challenge__result_challenged_team__gt=F('challenge__result_team'))
         )
     ),
-    'خسر': (
-        Q(challenge__result_team__isnull=False, challenge__result_challenged_team__isnull=False) & (
+    'خسارة': lambda time, date: (
+        _is_played(time, date) & (
             Q(team_id=F('challenge__team_id'),            challenge__result_team__lt=F('challenge__result_challenged_team')) |
             Q(team_id=F('challenge__challenged_team_id'), challenge__result_challenged_team__lt=F('challenge__result_team'))
         )
     ),
-    'تعادل': Q(
-        challenge__result_team__isnull=False,
-        challenge__result_challenged_team__isnull=False,
-        challenge__result_team=F('challenge__result_challenged_team'),
+    'تعادل': lambda time, date: (
+        _is_played(time, date) &
+        Q(challenge__result_team=F('challenge__result_challenged_team'))
     ),
-    'قريبا': Q(                     # ← new
-        challenge__status=ChallengeStatus.ACCEPTED,
-        challenge__result_team__isnull=True,
-        challenge__result_challenged_team__isnull=True,
-    ),
+    'قريباً': lambda time, date: _is_upcoming(time, date),
 }
-
-
-
-PLAYER_STATUS_FILTERS = {
-    'ملغى':              Q(challenge__status=ChallengeStatus.CANCELED),
-    'لم يحضر':          Q(challenge__status=ChallengeStatus.NO_SHOW),
-    'مشكلة في النتيجة': Q(challenge__status=ChallengeStatus.DISPUTED_SCORE),
-    'مشكلة':            Q(challenge__status=ChallengeStatus.DISPUTED),
-}
-
 
 
 class PlayerChallengesService:
 
     @staticmethod
     def get_player_challenges(player_id: str, result: str | None = None):
+        now = timezone.localtime(timezone.now())
+        today = now.date()
+        current_time = now.time()
+
         qs = (
             ChallengePlayerBooking.objects
             .filter(
@@ -77,8 +62,6 @@ class PlayerChallengesService:
         )
 
         if result in PLAYER_RESULT_FILTERS:
-            qs = qs.filter(PLAYER_RESULT_FILTERS[result])
-        elif result in PLAYER_STATUS_FILTERS:
-            qs = qs.filter(PLAYER_STATUS_FILTERS[result])
+            qs = qs.filter(PLAYER_RESULT_FILTERS[result](current_time, today))
 
         return qs

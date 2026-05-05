@@ -46,13 +46,14 @@ class UserBookingDetailService:
                 "equipment_def__name",
                 "equipment_def__description",
                 "equipment_def__image",
+                "price"
             )
         )
 
         booking = (
             Booking.objects
             .filter(id=booking_id)
-            .select_related('pitch', 'club')
+            .select_related('pitch', 'club', 'coupon')
             .prefetch_related(challenge_prefetch, players_prefetch, booking_equipment_prefetch)
             .only(
                 'id',
@@ -62,7 +63,9 @@ class UserBookingDetailService:
                 'is_challenge',
                 'player_id',
                 'pitch_id', 'pitch__name',
-                'club_id', 'club__name', 'coupon_id', 'created_at'
+                'club_id', 'club__name', 'coupon_id', 'created_at', 'coupon__code',  
+                'coupon__discount_type',       
+                'coupon__discount_value',   
 
             )
             .first()

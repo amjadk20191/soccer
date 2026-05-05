@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (TeamChallengesView, PlayerChallengesView, ChallengeDetailView, 
                     TeamDetailView, PlayerProfileView, SentChallengeListView, 
                     ChallengeCancelView, ChallengeTeamsView, CreateChallengeAPIView, 
-                    PendingChallengeListView, ChallengeReplyView, ChallengeResultChoicesView)
+                    PendingChallengeListView, ChallengeReplyView, ChallengeResultChoicesView, ScoreSubmissionView)
 
 router = DefaultRouter()
 
@@ -45,6 +45,7 @@ urlpatterns = [
     ),
     path('players/<uuid:player_id>/', PlayerProfileView.as_view(), name='player-profile'),
     path('challenge/<uuid:challenge_id>/', ChallengeDetailView.as_view(), name='challenge-detail'),
+    path('score/submit/', ScoreSubmissionView.as_view()),
 
     path('', include(router.urls)),
 

@@ -1,16 +1,20 @@
+import json
+
+from django.http import JsonResponse
 from rest_framework import status, generics
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.views import APIView, View, csrf_exempt
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from .services.notification_service import NotificationService
-from .serializers import UserDeviceSerializer, UserRegistrationSerializer, LoginSerializer, NoteSerializer
+from .serializers import NotificationSerializer, UserDeviceSerializer, UserRegistrationSerializer, LoginSerializer, NoteSerializer
 from core.services.service_authentication import MyTokenObtainPairSerializer
 from .serializers import CheckAvailabilityInputSerializer,UserSerializer,UpdateUserSerializer
 from .services.validateusername_phone import check_field_availability
 from .services.UserServices import UserService, UserDeviceService
-from .models import User
-
+from .models import AppVersion, Notification, User
+from typing import Any, Dict, List, Tuple, Optional
+from django.utils.decorators import method_decorator
 
 class RegisterUserAPIView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
@@ -95,6 +99,159 @@ class CheckAvailabilityView(APIView):
         return Response(result)
 
 
+class NotificationListView(generics.ListAPIView):
+    serializer_class   = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(
+            user=self.request.user
+        ).order_by('-created_at')
+
+
+class NotificationMarkReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, notification_id):
+        notification = Notification.objects.filter(
+            id=notification_id,
+            user=request.user
+        ).first()
+
+        if not notification:
+            return Response({'error': 'not found'}, status=404)
+
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+        return Response({'detail': 'marked as read'})
+
+
+class NotificationMarkAllReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).update(is_read=True)
+        return Response({'detail': 'all marked as read'})
+
+class GenericApiView(View):
+    """
+    Generic base for JSON API views.
+    Handles parsing, validation, and response formatting.
+    """
+    
+    http_method_names = ["post"]
+    required_fields: List[str] = []
+    choice_validators: Dict[str, Tuple[str, ...]] = {}
+    
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+    
+    def parse_body(self, request) -> Dict[str, Any]:
+        try:
+            return json.loads(request.body)
+        except json.JSONDecodeError:
+            self.error("Invalid JSON")
+    
+    def validate_required(self, body: Dict[str, Any]) -> None:
+        for field in self.required_fields:
+            if field not in body or not body[field]:
+                self.error(f"'{field}' is required")
+    
+    def validate_choices(self, body: Dict[str, Any]) -> None:
+        for field, valid in self.choice_validators.items():
+            value = body.get(field, "").lower()
+            if value not in valid:
+                self.error(f"'{field}' must be one of {list(valid)}")
+            body[field] = value
+    
+    def error(self, message: str, status: int = 400):
+        response = JsonResponse({"error": message}, status=status)
+        raise ApiException(response)
+
+
+class ApiException(Exception):
+    """Raised to abort and return an error response."""
+    def __init__(self, response: JsonResponse):
+        self.response = response
+
+
+class VersionCheckView(GenericApiView):
+    """
+    POST /api/v1/version-check/
+    
+    Generic view with declarative validation.
+    """
+    
+    required_fields = ["current_version", "platform", "app_type"]
+    choice_validators = {
+        "platform": ("android", "ios"),
+        "app_type": ("admin", "user"),
+    }
+    
+    def post(self, request):
+        body = self.parse_body(request)
+        self.validate_required(body)
+        self.validate_choices(body)
+        
+        current_version = body["current_version"]
+        current_build = body.get("build_number", 0)
+        platform = body["platform"]
+        app_type = body["app_type"]
+        
+        latest = self.get_latest_version(app_type, platform)
+        
+        if not latest:
+            return self.no_update_response(current_version)
+        
+        update_available = self.is_newer(
+            current_version, current_build, latest
+        )
+        
+        return JsonResponse({
+            "update_available": update_available,
+            "is_required": latest.is_required if update_available else False,
+            "latest_version": latest.version,
+            "download_url": latest.download_url if update_available else "",
+            "release_notes": latest.release_notes if update_available else "",
+        })
+    
+    def get_latest_version(self, app_type: str, platform: str) -> Optional[AppVersion]:
+        try:
+            return AppVersion.objects.filter(
+                app_type=app_type,
+                platform=platform,
+                is_active=True,
+            ).latest("created_at")
+        except AppVersion.DoesNotExist:
+            return None
+    
+    def no_update_response(self, current_version: str) -> JsonResponse:
+        return JsonResponse({
+            "update_available": False,
+            "is_required": False,
+            "latest_version": current_version,
+            "download_url": "",
+            "release_notes": "",
+        })
+    
+    def is_newer(self, current: str, current_build: int, latest: AppVersion) -> bool:
+        def parse(v: str) -> List[int]:
+            parts = v.split(".")
+            return [int(p) if p.isdigit() else 0 for p in parts] + [0] * (3 - len(parts))
+        
+        current_parsed = parse(current)
+        latest_parsed = parse(latest.version)
+        
+        if latest_parsed > current_parsed:
+            return True
+        if latest_parsed < current_parsed:
+            return False
+        
+        return latest.build_number > current_build
 
 class NoteCreateView(APIView):
     # permission_classes = [IsAuthenticated]

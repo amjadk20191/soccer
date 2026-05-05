@@ -96,7 +96,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     cancel_time = models.PositiveIntegerField(default=0, verbose_name=_('Cancel Time'))
     no_show_time = models.PositiveIntegerField(default=0, verbose_name=_('No show Time'))
     disputed_time = models.PositiveIntegerField(default=0, verbose_name=_('Disputed Time'))
-
+    challenge_wins = models.PositiveBigIntegerField(default=0)
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Updated At'))
@@ -135,7 +135,27 @@ class User(AbstractBaseUser, PermissionsMixin):
             (today.month, today.day) < (self.birthday.month, self.birthday.day)
         )
 
+class AppVersion(models.Model):
+    APP_TYPE_CHOICES = [("admin", "Admin"), ("user", "User")]
+    PLATFORM_CHOICES = [("android", "Android"), ("ios", "iOS")]
     
+    app_type = models.CharField(max_length=20, choices=APP_TYPE_CHOICES)
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+    version = models.CharField(max_length=20)  # e.g. "1.2.3"
+    build_number = models.PositiveIntegerField(default=0)
+    is_required = models.BooleanField(default=False)
+    download_url = models.URLField()
+    release_notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ["app_type", "platform", "version"]
+    
+    def __str__(self):
+        return f"{self.app_type} {self.platform} v{self.version}"
+  
 
 class UserDevice(models.Model):
     user = models.ForeignKey(
@@ -174,7 +194,13 @@ class Notification(models.Model):
     """General system notifications"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sended_notifications')
+    sender = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='sended_notifications',
+        null=True,     # ← add this
+        blank=True,    # ← add this
+    )
     title = models.CharField(max_length=200)
     message = models.TextField()
     is_read = models.BooleanField(default=False)

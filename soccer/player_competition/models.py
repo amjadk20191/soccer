@@ -12,17 +12,19 @@ User = get_user_model()
 
 
 class ChallengeStatus(models.IntegerChoices):
-    PENDING_TEAM = 1, _('بانتظار الفريق')   # waiting for challenged team to accept/reject
-    PENDING_OWNER = 2, _('بانتظار المالك')
-    PENDING_PAY = 3, _('بانتظار الدفع')
-    ACCEPTED = 4, _('مقبول')
+    PENDING_TEAM = 1, _('بانتظار_الفريق_المنافس')   # waiting for challenged team to accept/reject
+    PENDING_OWNER = 2, _('بانتظار_تأكيد_النادي')
+    PENDING_PAY = 3, _('بانتظار_تكملة_الدفع')
+    ACCEPTED = 4, _('مكتمل')
     REJECTED = 5, _('مرفوض')
     CANCELED = 6, _('ملغى')
-    NO_SHOW = 7, _('لم يحضر')
-    DISPUTED_SCORE = 8, _('مشكلة في النتيجة')
+    NO_SHOW = 7, _('متغيب')
+    DISPUTED_SCORE = 8, _('مشكلة_في_النتيجة')
     DISPUTED = 9, _('مشكلة')
-    EXPIRED = 10, _('انتهت صلاحيته')
-    PAY = 11, _('الدفع عبر التطبيق')
+    EXPIRED = 10, _('انتهت_صلاحيته')
+    PAY = 11, _('بانتظار_الدفع')
+    CHECK_PAY = 12, _('بانتظار_تأكبد_الدفع')
+
 
 
 
@@ -42,6 +44,8 @@ class Challenge(models.Model):
     start_time = models.TimeField()
     end_time = models.TimeField()
     date = models.DateField()
+    score_notified = models.BooleanField(default=False)  # ← add this
+    score_finalized = models.BooleanField(default=False)
     deposit_percent = models.DecimalField(
         max_digits=6, 
         decimal_places=3,
@@ -86,6 +90,34 @@ class ChallengePlayerBooking(models.Model):
         indexes = [
         models.Index(fields=['booking_id', 'player_id']),
         ]
+
+class ScoreSubmission(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    challenge = models.ForeignKey(
+        Challenge,
+        on_delete=models.CASCADE,
+        related_name='score_submissions'
+    )
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='score_submissions'
+    )
+    result_team = models.PositiveSmallIntegerField()             # score for team
+    result_challenged_team = models.PositiveSmallIntegerField()  # score for challenged_team
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'score_submissions'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['challenge', 'player'],
+                name='unique_score_per_player_per_challenge'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.player} → {self.result_team}-{self.result_challenged_team}'
 
 
 class ChallengeEquipment(models.Model):

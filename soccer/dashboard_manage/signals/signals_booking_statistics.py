@@ -359,7 +359,7 @@ def signal_update_price_statistics(sender, instance, created, **kwargs):
 
     price_undo: dict = {}
     price_new:  dict = {}
-    is_deposit = instance.payment_status == PayStatus.DEPOSIT
+    is_deposit = instance.payment_status in [PayStatus.DEPOSIT_ONLINE, PayStatus.DEPOSIT_CASH]
 
     # ✅ Use correct price based on coupon type
     stat_price = _get_stat_price(instance)

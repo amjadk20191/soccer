@@ -11,14 +11,16 @@ from management.models import Feature
 from .serializers import BookingDetailSerializer, UserBookingSerializer, BookingPriceRequestForUserSerializer, EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer
 from core.services.CouponService import CouponService
 from .helper import haversine_distance
-from .serializers import BookingPriceRequestForUserSerializer, CouponSerializer, EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer, PitchSearchResultSerializer, PitchSearchSerializer
+from .serializers import BookingPriceRequestForUserSerializer, CouponSerializer,ReviewCreateSerializer, ReviewListSerializer,  EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer, PitchSearchResultSerializer, PitchSearchSerializer
 from player_booking.services.ClubTimeService import ClubTimeService
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
-from .models import Booking, Coupon
+from .models import Booking, Coupon, Review
 from .services.ClubInfoService import ClubInfoService
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
 from django.conf import settings
+from rest_framework.permissions import IsAuthenticated
+from .services.BookingHistoryService import UserBookingService 
 from .services.PitchSearchService import PitchSearchService
 from .pagination import PitchSearchPagination
 
@@ -368,6 +370,23 @@ class EquipmentAvailabilityForUserView(APIView):
         
         return Response(available_equipments, status=status.HTTP_200_OK)
     
+class ReviewCreateView(generics.CreateAPIView):
+    serializer_class   = ReviewCreateSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+
+class ClubReviewListView(generics.ListAPIView):
+    """List all reviews for a specific club"""
+    serializer_class = ReviewListSerializer
+
+    def get_queryset(self):
+        club_id = self.kwargs['club_id']
+        return Review.objects.filter(
+            club_id=club_id
+        ).select_related('player').order_by('-created_at')
 
 
     
@@ -385,37 +404,37 @@ class BookingPriceForUserAPIView(APIView):
         club_id = serializer.validated_data['club']
         coupon_code = serializer.validated_data.get('coupon_code', None)
         response = dict()
-        try:
-            pitchprice = PricingService.calculate_final_price(
-                pitch=pitch,
-                club_id=club_id,
-                date=date,
-                start_time=start_time,
-                end_time=end_time
-            )
-            price=0
+        # try:
+        pitchprice = PricingService.calculate_final_price(
+            pitch=pitch,
+            club_id=club_id,
+            date=date,
+            start_time=start_time,
+            end_time=end_time
+        )
+        price=0
 
-            if equipments:
-                response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments, start_time, end_time)
-                price = price + response['equipments_price']
+        if equipments:
+            response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments, start_time, end_time)
+            price = price + response['equipments_price']
 
-            total_price = price + pitchprice
-            response['pitch_price'] = pitchprice
-            response['discount'] = 0
-            response['coupon_applied'] = False
-            response['price'] = total_price
-            if coupon_code:
-                request_user = request.user if request.user.is_authenticated else None
-                coupon_result = CouponService.apply_coupon(total_price, coupon_code,user=request_user, club_id=club_id)
-                coupon_result.pop('coupon', None)
-                response.update(coupon_result)
+        total_price = price + pitchprice
+        response['pitch_price'] = pitchprice
+        response['discount'] = 0
+        response['coupon_applied'] = False
+        response['price'] = total_price
+        if coupon_code:
+            request_user = request.user if request.user.is_authenticated else None
+            coupon_result = CouponService.apply_coupon(total_price, coupon_code,user=request_user, club_id=club_id)
+            coupon_result.pop('coupon', None)
+            response.update(coupon_result)
 
 
-            
-            return Response(response, status=status.HTTP_200_OK)
+        
+        return Response(response, status=status.HTTP_200_OK)
                 
-        except Exception as e:
-            return Response({
-                'error': 'فشل حساب السعر. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى.',
-                'detail': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # except Exception as e:
+        #     return Response({
+        #         'error': 'فشل حساب السعر. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى.',
+        #         'detail': str(e)
+        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

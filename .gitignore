@@ -12,3 +12,4 @@ env/
 ENV/
 .match.json
 **/*.pyc
+*.sqllite3

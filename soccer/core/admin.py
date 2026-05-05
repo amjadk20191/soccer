@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, Notification, Note
+from .models import AppVersion, User, Notification, Note, UserDevice
 
 
 @admin.register(Note)
@@ -67,6 +67,23 @@ class UserAdmin(BaseUserAdmin):
     # This tells Django admin to use 'phone' instead of 'username'
     username_field = 'phone'
 
+
+@admin.register(UserDevice)
+class UserDeviceAdmin(admin.ModelAdmin):
+    list_display = ('user', 'fcm_token_short', 'created_at')
+    search_fields = ('user__username', 'user__email', 'fcm_token')
+    list_filter = ('created_at',)
+    readonly_fields = ('created_at',)
+
+    def fcm_token_short(self, obj):
+        return obj.fcm_token[:20] + '...'
+    fcm_token_short.short_description = 'FCM Token'
+
+@admin.register(AppVersion)
+class AppVersionAdmin(admin.ModelAdmin):
+    list_display = ["app_type", "platform", "version", "build_number", "is_required", "is_active"]
+    list_filter = ["app_type", "platform", "is_required", "is_active"]
+    search_fields = ["version"]
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):

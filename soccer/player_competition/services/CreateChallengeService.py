@@ -131,7 +131,7 @@ class CreateChallengeService:
                 challenged_team__teammember__status=MemberStatus.ACTIVE,
             ),
             date=date,
-            status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, ChallengeStatus.ACCEPTED],
+            status__in=[ChallengeStatus.PENDING_OWNER, ChallengeStatus.CHECK_PAY, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, ChallengeStatus.ACCEPTED, ChallengeStatus.DISPUTED],
             start_time__lt=end_time,
             end_time__gt=start_time,
         ).exists()

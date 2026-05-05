@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'dashboard_statistics',
     'dashboard_manage',
     'dashboard_booking',
+    'django_q',
 ]
 
 MIDDLEWARE = [
@@ -72,8 +73,13 @@ MIDDLEWARE = [
 ]
 
 load_dotenv()  # Load environment variables from .env file
+
+#FireBase  
 FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID')
 FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH')
+
+#jobs helpers
+BOOKING_EXPIRY_HOURS = 0.01
 
 
 ROOT_URLCONF = 'soccer.urls'
@@ -106,6 +112,16 @@ DATABASES = {
     }
 }
 
+TIME_ZONE = 'Asia/Damascus'  
+
+Q_CLUSTER = {
+    'name': 'booking_app',
+    'workers': 1 ,
+    'poll': 300,
+    'timeout': 60,
+    'retry': 120,
+    'orm': 'default'
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -151,7 +167,7 @@ AUTH_USER_MODEL = 'core.User'
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -192,6 +208,6 @@ MIN_NUM_DAY_BEFORE_BOOKING=0
 MAX_NUM_DAY_BEFORE_BOOKING=10
 MIN_TEAM_MEMBERS = 1
 MIN_TEAM_MEMBERS_FOR_CHALLENGE = 1
-
+PAYMENT_REMINDER_MINUTES = 30
 
 STATIC_ROOT =  os.path.join(BASE_DIR,'api/static/static_api')

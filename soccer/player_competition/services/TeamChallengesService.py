@@ -1,59 +1,54 @@
 from django.db.models import F, Q
+from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
-
 from player_competition.models import Challenge, ChallengeStatus
-
 
 PAST_CHALLENGE_STATUSES = [
     ChallengeStatus.ACCEPTED,
-    ChallengeStatus.CANCELED,
-    ChallengeStatus.NO_SHOW,
-    ChallengeStatus.DISPUTED_SCORE,
-    ChallengeStatus.DISPUTED,
 ]
 
-# Result-based filters (require scores to exist)
+# Shared helper: challenge date/time has already ended
+def _is_played(time, date):
+    return Q(date__lt=date) | Q(date=date, end_time__lte=time)
+
+# Shared helper: challenge hasn't started yet
+def _is_upcoming(time, date):
+    return Q(date__gt=date) | Q(date=date, start_time__gt=time)
+
+
 TEAM_RESULT_FILTERS = {
-    'فاز': lambda team_id: (
-        Q(result_team__isnull=False, result_challenged_team__isnull=False) & (
+    # Won: played + team scored more
+    'فوز': lambda team_id, time, date: (
+        _is_played(time, date) & (
             Q(team_id=team_id,            result_team__gt=F('result_challenged_team')) |
             Q(challenged_team_id=team_id, result_challenged_team__gt=F('result_team'))
         )
     ),
-    'خسر': lambda team_id: (
-        Q(result_team__isnull=False, result_challenged_team__isnull=False) & (
+    # Lost: played + team scored less
+    'خسارة': lambda team_id, time, date: (
+        _is_played(time, date) & (
             Q(team_id=team_id,            result_team__lt=F('result_challenged_team')) |
             Q(challenged_team_id=team_id, result_challenged_team__lt=F('result_team'))
         )
     ),
-    'تعادل': lambda _: Q(
-        result_team__isnull=False,
-        result_challenged_team__isnull=False,
-        result_team=F('result_challenged_team'),
+    # Draw: played + scores are equal + team is participant
+    'تعادل': lambda team_id, time, date: (
+        _is_played(time, date) &
+        Q(result_team=F('result_challenged_team'))
     ),
-    'قريبا': lambda _: Q(           # ← new
-        status=ChallengeStatus.ACCEPTED,
-        result_team__isnull=True,
-        result_challenged_team__isnull=True,
-    ),
+    # Upcoming: date/time hasn't arrived yet + team is participant
+    'قريباً': lambda team_id, time, date: (
+        _is_upcoming(time, date)),
 }
-
-# Status-based filters
-TEAM_STATUS_FILTERS = {
-    'ملغى':              Q(status=ChallengeStatus.CANCELED),
-    'لم يحضر':          Q(status=ChallengeStatus.NO_SHOW),
-    'مشكلة في النتيجة': Q(status=ChallengeStatus.DISPUTED_SCORE),
-    'مشكلة':            Q(status=ChallengeStatus.DISPUTED),
-}
-
-
-VALID_RESULTS = set(TEAM_RESULT_FILTERS) | set(TEAM_STATUS_FILTERS)
 
 
 class TeamChallengesService:
-
     @staticmethod
     def get_team_challenges(team_id: str, result: str | None = None):
+        now = timezone.localtime(timezone.now())
+        today = now.date()
+        current_time = now.time()
+
         qs = (
             Challenge.objects
             .filter(
@@ -72,8 +67,6 @@ class TeamChallengesService:
         )
 
         if result in TEAM_RESULT_FILTERS:
-            qs = qs.filter(TEAM_RESULT_FILTERS[result](team_id))
-        elif result in TEAM_STATUS_FILTERS:
-            qs = qs.filter(TEAM_STATUS_FILTERS[result])
+            qs = qs.filter(TEAM_RESULT_FILTERS[result](team_id, current_time, today))
 
         return qs

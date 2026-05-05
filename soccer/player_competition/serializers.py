@@ -1,10 +1,12 @@
 from django.utils import timezone
 from rest_framework import serializers
 from player_team.models import Team, TeamMember
-from .models import Challenge, ChallengePlayerBooking, ChallengeStatus
+from player_booking.models import BookingStatus
+from .models import Challenge, ChallengePlayerBooking, ScoreSubmission, ChallengeStatus
 from datetime import date, timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from collections import Counter
 
 import datetime
 from django.utils import timezone as tz
@@ -34,27 +36,19 @@ def _resolve_result(
     date: datetime.date,
     end_time: datetime.time,
 ) -> str | None:
-    status_map = {
-        ChallengeStatus.CANCELED:       'ملغى',
-        ChallengeStatus.NO_SHOW:        'لم يحضر',
-        ChallengeStatus.DISPUTED_SCORE: 'مشكلة في النتيجة',
-        ChallengeStatus.DISPUTED:       'مشكلة',
-    }
-    if status in status_map:
-        return status_map[status]
 
     # Check if the challenge hasn't finished yet
     end_naive = datetime.datetime.combine(date, end_time)
     end_dt = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
     if end_dt > tz.now():
-        return 'قريبا'
+        return 'قريباً'
 
     our_score, their_score = (
         (result_team, result_challenged_team) if is_our_team_first
         else (result_challenged_team, result_team)
     )
-    if our_score > their_score: return 'فاز'
-    if our_score < their_score: return 'خسر'
+    if our_score > their_score: return 'فوز'
+    if our_score < their_score: return 'خسارة'
     return 'تعادل'
 
 class TeamChallengeSerializer(serializers.ModelSerializer):
@@ -271,7 +265,7 @@ class ChallengeHistorySerializer(serializers.Serializer):
         end_dt    = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
 
         if end_dt > tz.now():
-            return 'قريبا'
+            return 'قريباً'
 
         my_score  = self.get_my_score(obj)
         opp_score = self.get_opponent_score(obj)
@@ -390,7 +384,7 @@ class PlayerChallengeSerializer(serializers.Serializer):
         end_dt    = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
 
         if end_dt > tz.now():
-            return 'قريبا'
+            return 'قريباً'
 
         # Resolve scores from the player's perspective
         if obj.team_id == challenge.team_id:
@@ -406,6 +400,102 @@ class PlayerChallengeSerializer(serializers.Serializer):
         if my_score < opp_score:
             return 'خسارة'
         return 'تعادل'
+
+
+class ScoreSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = ScoreSubmission
+        fields = ['challenge', 'result_team', 'result_challenged_team']
+
+    def validate(self, attrs):
+        challenge = attrs['challenge']
+        player    = self.context['request'].user
+
+        # check booking is completed first
+        if challenge.booking is None:
+            raise serializers.ValidationError('لا يوجد حجز مرتبط بهذه المباراة.')
+        
+        if challenge.booking.status != BookingStatus.COMPLETED:
+            raise serializers.ValidationError('لا يمكن إرسال النتيجة قبل اكتمال الحجز.')
+
+        # check player participated in this challenge
+        participated = ChallengePlayerBooking.objects.filter(
+            challenge=challenge,
+            player=player
+        ).exists()
+        if not participated:
+            raise serializers.ValidationError('لم تشارك في هذه المباراة.')
+
+        # check already submitted
+        already_submitted = ScoreSubmission.objects.filter(
+            challenge=challenge,
+            player=player
+        ).exists()
+        if already_submitted:
+            raise serializers.ValidationError('لقد قمت بإرسال النتيجة مسبقاً.')
+
+        return attrs
+
+
+    def create(self, validated_data):
+        challenge = validated_data['challenge']
+        player    = self.context['request'].user
+
+        # save submission
+        submission = ScoreSubmission.objects.create(
+            challenge=challenge,
+            player=player,
+            result_team=validated_data['result_team'],
+            result_challenged_team=validated_data['result_challenged_team'],
+        )
+
+        # check if we can decide the final score
+        self._try_finalize_score(challenge)
+
+        return submission
+
+    def _try_finalize_score(self, challenge):
+        
+        # get total players count
+        total_players = ChallengePlayerBooking.objects.filter(
+            challenge=challenge
+        ).count()
+
+        # get all submissions
+        submissions = ScoreSubmission.objects.filter(challenge=challenge)
+        submitted_count = submissions.count()
+
+        print(f'[score] {submitted_count}/{total_players} submitted')
+
+        # count votes per score combination
+        votes = Counter(
+            (s.result_team, s.result_challenged_team)
+            for s in submissions
+        )
+
+        majority_threshold = total_players / 2
+        most_common_score, most_common_count = votes.most_common(1)[0]
+
+        if most_common_count > majority_threshold:
+            # majority reached → finalize immediately
+            challenge.result_team            = most_common_score[0]
+            challenge.result_challenged_team = most_common_score[1]
+            challenge.status                 = ChallengeStatus.ACCEPTED
+            challenge.score_finalized        = True
+            challenge.save(update_fields=['result_team', 'result_challenged_team', 'status', 'score_finalized'])
+            print(f'[score] majority agreed: {most_common_score[0]}-{most_common_score[1]} ✅')
+            return  # ← stop here, don't continue
+
+        if submitted_count == total_players:
+            # all submitted but no majority → 50/50 split
+            challenge.status = ChallengeStatus.DISPUTED_SCORE
+            challenge.score_finalized = True
+            challenge.save(update_fields=['status', 'score_finalized'])
+            print(f'[score] 50/50 split, no majority ✅')
+            return
+
+        # not enough submissions yet
+        print(f'[score] no majority yet, waiting...')
 
 
 class PlayerProfileSerializer(serializers.ModelSerializer):

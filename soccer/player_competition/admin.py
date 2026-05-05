@@ -94,7 +94,7 @@ class ChallengeAdmin(admin.ModelAdmin):
         (_('Challenge Details'), {
             'fields': (
                 'team', 'challenged_team', 'pitch', 'club',
-                'date', 'start_time', 'end_time', 'deposit_percent'
+                'date', 'start_time', 'end_time', 'score_notified', 'deposit_percent'
             )
         }),
         (_('Match Results'), {

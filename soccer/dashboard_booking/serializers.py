@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import  BookingNotification
-from  player_booking.models import Booking, BookingStatus, PayStatus, BookingEquipment
+from  player_booking.models import Booking, BookingStatus, Coupon, PayStatus, BookingEquipment
 from dashboard_manage.models import Pitch
 from dashboard_booking.services.PricingService import PricingService
 from .services.EquipmentBookingService import EquipmentBookingService
@@ -179,6 +179,12 @@ class BookingEquipmentDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'image', 'quantity', 'price']
 
 
+class CouponDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = Coupon
+        fields = ['code', 'discount_type', 'discount_value']
+
+
 class BookingDetailSerializer(serializers.ModelSerializer):
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
     full_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
@@ -186,14 +192,22 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payment_status = serializers.CharField(source='get_payment_status_display', read_only=True)
     equipments = BookingEquipmentDetailSerializer(source='bookingequipment_set', many=True, read_only=True)
+    coupon= CouponDetailSerializer(read_only=True, allow_null=True)
+    final_price_with_deposit  = serializers.SerializerMethodField()  # ← override the model field
 
     class Meta:
         model = Booking
         fields = [
-            'id', 'date', 'start_time', 'end_time', 'price', 'final_price', 'status_display',
+            'id', 'date', 'start_time', 'end_time', 'price', 'final_price', 'final_price_with_deposit', 'status_display',
             'created_at', 'updated_at', 'player_name', 'full_name', 'pitch_name', 'phone', 'by_owner',
-            'payment_status','note_owner', 'equipments'
+            'payment_status','note_owner', 'equipments',  'coupon'
+
         ]
+
+    def get_final_price_with_deposit(self, obj):
+        if obj.deposit is not None:
+            return obj.final_price - obj.deposit
+        return obj.final_price
 
 class BookingListPitchSerializer(serializers.ModelSerializer):
     player_name = serializers.CharField(source='player.username', read_only=True, allow_null=True)
@@ -322,11 +336,11 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"status":"الحالة يجب أن تكون مكتملة أو في انتظار الدفع."})
 
         # payment_status "PENDING_PAY" shoulb be DEPOSIT or LATER
-        if status == BookingStatus.PENDING_PAY.value and not(payment_status == PayStatus.LATER.value or payment_status == PayStatus.DEPOSIT.value):
+        if status == BookingStatus.PENDING_PAY.value and not(payment_status == PayStatus.LATER.value or payment_status == PayStatus.DEPOSIT_CASH.value):
             raise serializers.ValidationError({"error":"حالة الدفع يجب أن تكون لاحقًا أو دفعة مقدمة إذا كانت حالة الحجز في انتظار الدفع."})
 
         # if the payment_status is "Deposit" then deposit field should be grater than 0
-        if payment_status == PayStatus.DEPOSIT.value and attrs.get('deposit', 0) < 0:
+        if payment_status == PayStatus.DEPOSIT_CASH.value and attrs.get('deposit', 0) < 0:
             raise serializers.ValidationError({"error": "الدفعة المقدمة يجب أن تكون أكبر من صفر."})
 
         # there should only one of (phone, username)
@@ -362,10 +376,10 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         price = PricingService.calculate_final_price(validated_data['pitch'], club_id, validated_data['date'], validated_data['start_time'], validated_data['end_time'])
 
         if validated_data['status'] == BookingStatus.COMPLETED.value:
-            validated_data['payment_status'] = PayStatus.UNKNOWN.value
+            validated_data['payment_status'] = PayStatus.CASH.value
 
         # delete deposit if payment_status what not deposit
-        if validated_data.get('payment_status', PayStatus.DEPOSIT.value) != PayStatus.DEPOSIT.value:
+        if validated_data.get('payment_status', PayStatus.DEPOSIT_CASH.value) != PayStatus.DEPOSIT_CASH.value:
             validated_data.pop('deposit', None)
         equipments = validated_data.pop("equipments",[])
 

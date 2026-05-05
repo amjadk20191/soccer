@@ -6,11 +6,13 @@ from rest_framework import status
 
 from .pagination import ChallengeTeamsPagination, TeamChallengesPagination, PlayerChallengesPagination
 from .serializers import (CreateChallengeSerializer, PendingChallengeSerializer,
-                           ChallengeReplySerializer, ShowChallengeTeamsSerializer,
+                           ChallengeReplySerializer, ScoreSubmissionSerializer, ShowChallengeTeamsSerializer,
                            RequestedChallengeSerializer, ChallengeDetailSerializer,
                            PlayerProfileSerializer, TeamDetailSerializer,  TeamChallengeSerializer, PlayerChallengeListSerializer)
 
-from rest_framework.generics import ListAPIView, ValidationError
+from rest_framework.exceptions import ValidationError
+
+from rest_framework.generics import ListAPIView
 from .services import CreateChallengeService, ShowChallengeTeamService, GetPendingChallengesService, ReplyChallengeService, GetSentChallengesService, CancelChallengeService
 from rest_framework import generics
 
@@ -19,21 +21,16 @@ from .services.team_detail_service import TeamDetailService
 from django.db import transaction
 from .services.challenge_detail_service import ChallengeDetailService
 from .services.challenge_equipment_service import ChallengeEquipmentService
-# views.py
-
+from rest_framework.permissions import IsAuthenticated
 
 from .services.PlayerChallengesService import PlayerChallengesService
 from .services.TeamChallengesService import TeamChallengesService
 
 VALID_RESULTS = [
-            'قريبا',
-            'فاز',
-            'خسر',
-            'تعادل',
-            'ملغى',
-            'لم يحضر',
-            'مشكلة في النتيجة',
-            'مشكلة',
+            'قريباً',
+            'فوز',
+            'خسارة',
+            'تعادل'
         ]
 
 
@@ -50,7 +47,7 @@ class BaseChallengeMixin:
         if not raw:
             return None
         if raw not in VALID_RESULTS:
-            raise ValidationError({'result': f"قيمة غير صالحة. الخيارات المتاحة: {', '.join(VALID_RESULTS)}."})
+            raise ValidationError({'error': f"قيمة غير صالحة. الخيارات المتاحة: {', '.join(VALID_RESULTS)}."})
         return raw
 
 class TeamChallengesView(BaseChallengeMixin, ListAPIView):
@@ -104,6 +101,7 @@ class PlayerProfileView(generics.RetrieveAPIView):
             player_id=self.kwargs['player_id'],
             team_id=team_id,
         )
+       
         # stash so get_serializer_context can pick it up
         self._team_context = team_context
         return player
@@ -113,7 +111,11 @@ class PlayerProfileView(generics.RetrieveAPIView):
         ctx.update(getattr(self, '_team_context', {'in_team': None, 'request_id': None}))
         return ctx
 
-
+class ScoreSubmissionView(generics.CreateAPIView):
+    serializer_class   = ScoreSubmissionSerializer
+    permission_classes = [IsAuthenticated]
+    
+    
 class ChallengeTeamsView(ListAPIView):
     serializer_class = ShowChallengeTeamsSerializer
     pagination_class = ChallengeTeamsPagination

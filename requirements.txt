@@ -16,3 +16,4 @@ typing_extensions==4.15.0
 cryptography
 opencv-python-headless
 dotenv
+django-q2

@@ -4,7 +4,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 
 from .utils import validate_profile_image
-from .models import User, UserDevice, Note
+from .models import Notification, User, UserDevice, Note
 
 from .validators import validate_phone_format
 
@@ -50,6 +50,19 @@ class NoteSerializer(serializers.ModelSerializer):
         model = Note
         fields = ['id', 'note', 'created_at', 'updated_at']
         
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'title',
+            'message',
+            'is_read',
+            'notification_type',
+            'helper_id',
+            'created_at',
+        ]
+
         
 class UpdateUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(

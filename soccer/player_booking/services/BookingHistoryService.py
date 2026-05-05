@@ -28,17 +28,18 @@ _TCL  = Booking._meta.get_field('club').related_model._meta.db_table
 StatusFilter = tuple[list[int] | None, list[int]]
 
 ARABIC_STATUS_MAP: dict[str, StatusFilter] = {
-    'بانتظار_التأكيد_النادي':                    ([BookingStatus.PENDING_MANAGER], [ChallengeStatus.PENDING_OWNER]),
-    'وقت_مقترح_جديد':                            ([BookingStatus.PENDING_PLAYER],  []),
-    'مشكلة_في_النتيجة':                          ([],                              [ChallengeStatus.DISPUTED_SCORE]),
-    'بانتظار_الفريق_المنافس':                    ([],                              [ChallengeStatus.PENDING_TEAM]),
-    'بانتظار_تكملة_الدفع':                       ([BookingStatus.PENDING_PAY],     [ChallengeStatus.PENDING_PAY]),
+    'بانتظار_تأكيد_النادي':                    ([BookingStatus.PENDING_MANAGER], [ChallengeStatus.PENDING_OWNER]),
+    'وقت_مقترح_جديد':                           ([BookingStatus.PENDING_PLAYER],  []),
+    'مشكلة_في_النتيجة':                         ([],                              [ChallengeStatus.DISPUTED_SCORE]),
+    'بانتظار_الفريق_المنافس':                   ([],                              [ChallengeStatus.PENDING_TEAM]),
+    'بانتظار_تكملة_الدفع':                      ([BookingStatus.PENDING_PAY],     [ChallengeStatus.PENDING_PAY]),
     'مكتمل':                                     ([BookingStatus.COMPLETED],       [ChallengeStatus.ACCEPTED]),
     'ملغى':                                      ([BookingStatus.CANCELED],        [ChallengeStatus.CANCELED]),
-    'لم_تحضر':                                   ([BookingStatus.NO_SHOW],         [ChallengeStatus.NO_SHOW]),
+    'متغيب':                                     ([BookingStatus.NO_SHOW],         [ChallengeStatus.NO_SHOW]),
     'مشكلة':                                     ([BookingStatus.DISPUTED],        [ChallengeStatus.DISPUTED]),
     'انتهت_صلاحيته':                             ([BookingStatus.EXPIRED],         [ChallengeStatus.EXPIRED]),
-    'بانتظار_الدفع':                             ([BookingStatus.PAY],         [ChallengeStatus.PAY]),
+    'بانتظار_الدفع':                            ([BookingStatus.PAY],             [ChallengeStatus.PAY]),
+    'بانتظار_تأكبد_الدفع':                      ([BookingStatus.CHECK_PAY],       [ChallengeStatus.CHECK_PAY]),
 }
 
 
@@ -61,7 +62,7 @@ VALID_ARABIC_STATUSES: list[str] = list(ARABIC_STATUS_MAP.keys())
 
 _NO_FILTER_CHALLENGE_STATUSES = [ChallengeStatus.PENDING_TEAM, ChallengeStatus.DISPUTED_SCORE, 
                                 ChallengeStatus.PENDING_OWNER, ChallengeStatus.PENDING_PAY, ChallengeStatus.PAY, 
-                                ChallengeStatus.ACCEPTED, ChallengeStatus.CANCELED,
+                                ChallengeStatus.ACCEPTED, ChallengeStatus.CANCELED, ChallengeStatus.CHECK_PAY,
                                 ChallengeStatus.NO_SHOW, ChallengeStatus.DISPUTED, ChallengeStatus.EXPIRED]
 
 

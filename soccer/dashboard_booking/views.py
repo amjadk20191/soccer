@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view
 from django.shortcuts import get_object_or_404
 from dashboard_manage.models import Club
 from  player_booking.models import Booking, BookingStatus, PayStatus, BookingEquipment
+from soccer.enm import BOOKING_STATUS_DENIED
 from .serializers import (
     BookingListSerializer,
     BookingDetailSerializer,
@@ -48,7 +49,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         club_id = self.request.auth.get('club_id')
         if self.action == 'retrieve':
-            return Booking.objects.filter(club_id=club_id, pitch__is_deteted=False).select_related('pitch', 'player'
+            return Booking.objects.filter(club_id=club_id, pitch__is_deteted=False).select_related('pitch', 'player', 'coupon',
                                         ).prefetch_related(
                                                 Prefetch(
                                                     'bookingequipment_set',
@@ -123,7 +124,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         bookings = Booking.objects.filter(
                     pitch_id=pitch_id,
                     club_id=club_id,
-                    date=date
+                    date=date,
+                    status__in=BOOKING_STATUS_DENIED + [BookingStatus.PENDING_MANAGER.value]
+
                 ).select_related('player').order_by('start_time')
         
 
@@ -136,6 +139,41 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(bookings, many=True)
         return Response(serializer.data)
     
+
+    @action(detail=False, methods=['get'], url_path='by-day-time-pitch-char')
+    def by_day_time_pitch(self, request):
+        """
+        GET: List all bookings for a specific day, time and pitch
+        """
+        input_serializer = BookingSlotFilterSerializer(data=request.query_params)
+        input_serializer.is_valid(raise_exception=True)
+        
+        params = input_serializer.validated_data
+        
+        club_id = request.auth.get('club_id')
+        date = params['date']
+        time_from = params.get('time_from', None)
+        time_to = params.get('time_to', None)
+        pitch_id = params['pitch_id']        
+        
+        bookings = Booking.objects.filter(
+                    pitch_id=pitch_id,
+                    club_id=club_id,
+                    date=date,
+                    status__in=BOOKING_STATUS_DENIED 
+                ).select_related('player').order_by('start_time')
+        
+
+        if time_to and time_from:
+            bookings=bookings.filter(
+                start_time__lt=time_to, 
+                end_time__gt=time_from
+            )
+            
+        serializer = self.get_serializer(bookings, many=True)
+        return Response(serializer.data)
+    
+
 
     @action(detail=True, methods=['patch'], url_path='convert-booking')
     def convert_booking(self, request, pk=None):
@@ -160,28 +198,26 @@ class BookingViewSet(viewsets.ModelViewSet):
     def show_convert_booking_status(self, request, pk=None):
 
         return Response({
-            BookingStatus.PENDING_MANAGER.name: [
-                (BookingStatus.PAY.name, BookingStatus.PAY.value),
-                (BookingStatus.REJECT.name, BookingStatus.REJECT.value),
-                (BookingStatus.PENDING_PLAYER.name, BookingStatus.PENDING_PLAYER.value),
+            str(BookingStatus.PENDING_MANAGER.label): [
+                (str(BookingStatus.PAY.label), BookingStatus.PAY.value),
+                (str(BookingStatus.REJECT.label), BookingStatus.REJECT.value),
+                (str(BookingStatus.PENDING_PLAYER.label), BookingStatus.PENDING_PLAYER.value),
             ], 
-            BookingStatus.COMPLETED.name:[
-                (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
-                # (BookingStatus.NO_SHOW.name, BookingStatus.NO_SHOW.value),
-                (BookingStatus.CANCELED.name, BookingStatus.CANCELED.value),
+            str(BookingStatus.COMPLETED.label): [
+                (str(BookingStatus.DISPUTED.label), BookingStatus.DISPUTED.value),
+                (str(BookingStatus.CANCELED.label), BookingStatus.CANCELED.value),
             ],
-            BookingStatus.PENDING_PAY.name:[
-                (BookingStatus.COMPLETED.name, BookingStatus.COMPLETED.value),
-                (BookingStatus.CANCELED.name, BookingStatus.CANCELED.value),
-                (BookingStatus.DISPUTED.name, BookingStatus.DISPUTED.value),
-                (BookingStatus.NO_SHOW.name, BookingStatus.NO_SHOW.value),
-
+            str(BookingStatus.PENDING_PAY.label): [
+                (str(BookingStatus.COMPLETED.label), BookingStatus.COMPLETED.value),
+                (str(BookingStatus.CANCELED.label), BookingStatus.CANCELED.value),
+                (str(BookingStatus.DISPUTED.label), BookingStatus.DISPUTED.value),
+                (str(BookingStatus.NO_SHOW.label), BookingStatus.NO_SHOW.value),
             ],
-            BookingStatus.CLOSED.name:[
-                (BookingStatus.CANCELED.name, BookingStatus.CANCELED.value),
+            str(BookingStatus.CLOSED.label): [
+                (str(BookingStatus.CANCELED.label), BookingStatus.CANCELED.value),
             ]
-            })
-   
+        })
+    
         
     @action(detail=True, methods=['patch'], url_path='convert-to-pending-player')
     def convert_to_pending_player(self, request, pk=None):
@@ -236,48 +272,47 @@ class BookingPriceAPIView(APIView):
 
         response = dict()
         # Calculate price
-        try:
-            price = PricingService.calculate_final_price(
-                pitch=pitch,
-                club_id=club_id,
-                date=date,
-                start_time=start_time,
-                end_time=end_time
-            )
+        # try:
+        price = PricingService.calculate_final_price(
+            pitch=pitch,
+            club_id=club_id,
+            date=date,
+            start_time=start_time,
+            end_time=end_time
+        )
 
-            if equipments:
-                response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments, start_time, end_time)
-                response['price'] = price + response['equipments_price']
+        if equipments:
+            response = EquipmentBookingService.Get_Equipment_Price(club_id, equipments, start_time, end_time)
+            response['price'] = price + response['equipments_price']
 
-            response['pitch_price'] = price
-            print(response)
+        response['pitch_price'] = price
+        print(response)
 
 
-            return Response(dict(response), status=status.HTTP_200_OK)
-                
-        except Exception as e:
-            return Response({
-                'error': 'لا يمكن حساب السعر. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى.',
-                'detail': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(dict(response), status=status.HTTP_200_OK)
+            
+        # except Exception as e:
+        #     return Response({
+        #         'error': 'لا يمكن حساب السعر. يرجى التحقق من البيانات المدخلة والمحاولة مرة أخرى.',
+        #         'detail': str(e)
+        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class BookingstatusAPIView(APIView):
     def get(self, request):
 
-    
+            
         return Response({
             'PayStatus': {
-                PayStatus.LATER.name:PayStatus.LATER.value,
-                PayStatus.DEPOSIT.name:PayStatus.DEPOSIT.value
+                str(PayStatus.LATER.label): PayStatus.LATER.value,
+                str(PayStatus.DEPOSIT_CASH.label): PayStatus.DEPOSIT_CASH.value
             },
-            'BookingStatus':{
-                BookingStatus.COMPLETED.name:BookingStatus.COMPLETED.value,
-                BookingStatus.PENDING_PAY.name:BookingStatus.PENDING_PAY.value,
-                BookingStatus.DISPUTED.name:BookingStatus.DISPUTED.value,
-                BookingStatus.CANCELED.name:BookingStatus.CANCELED.value,
+            'BookingStatus': {
+                str(BookingStatus.COMPLETED.label): BookingStatus.COMPLETED.value,
+                str(BookingStatus.PENDING_PAY.label): BookingStatus.PENDING_PAY.value,
+                str(BookingStatus.DISPUTED.label): BookingStatus.DISPUTED.value,
+                str(BookingStatus.CANCELED.label): BookingStatus.CANCELED.value,
             }
-
         }, status=status.HTTP_200_OK)
     
         
