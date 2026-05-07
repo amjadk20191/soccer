@@ -125,7 +125,7 @@ class BookingViewSet(viewsets.ModelViewSet):
                     pitch_id=pitch_id,
                     club_id=club_id,
                     date=date,
-                    status__in=BOOKING_STATUS_DENIED + [BookingStatus.PENDING_MANAGER.value]
+                    status__in=BOOKING_STATUS_DENIED + [BookingStatus.PENDING_MANAGER.value, BookingStatus.CANCELED.value, BookingStatus.NO_SHOW.value]
 
                 ).select_related('player').order_by('start_time')
         
@@ -233,6 +233,11 @@ class BookingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        if booking.is_challenge:
+            return Response(
+                {'error': 'تقديم عرض جديد للاعب غير متاح للتحديات.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         club_id = request.auth.get('club_id')
         
         serializer = self.get_serializer(data=request.data)

@@ -4,8 +4,11 @@ from  player_booking.models import Booking, BookingStatus, BookingEquipment
 from dashboard_manage.models import Pitch, ClubEquipment 
 from rest_framework.exceptions import ValidationError 
 from django.shortcuts import get_object_or_404
+from core.models import User
+from core.services.notification_service import NotificationService
 from soccer.enm import BOOKING_STATUS_DENIED
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
+from django.db.models import Q
 
 from player_competition.models import Challenge, ChallengePlayerBooking, ChallengeStatus
 from player_team.models import MemberStatus, TeamMember
@@ -36,6 +39,17 @@ class BookingService:
                 cls.owner_completed_booking(booking)
             case _:
                 raise ValidationError({"error": "الحالة غير صحيحة"})
+            
+            
+        stuff=cls.get_club_workers(club_id)
+        for user in stuff:
+            NotificationService.send_notification(
+                user=user,
+                title='تغير حالة ',
+                body=f'تم تغيير حالة الحجز',
+                notification_type='Booking_status',
+                helper_id=booking.id,
+            )
 
     @classmethod
     @transaction.atomic
@@ -257,3 +271,12 @@ class BookingService:
         booking.status = BookingStatus.CANCELED
         booking.save(update_fields=['status', 'updated_at'])
         return booking
+    
+    @classmethod
+    def get_club_workers(cls, club_id) -> QuerySet:
+        return User.objects.filter(
+            Q(club__id=club_id) |          # manager (related_name="club")
+            Q(clubstaff__club_id=club_id)  # staff
+        ).distinct()
+    
+

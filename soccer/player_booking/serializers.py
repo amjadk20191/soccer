@@ -619,7 +619,7 @@ class PitchSearchResultSerializer(serializers.ModelSerializer):
     club_address      = serializers.CharField(source='club.address')
     club_latitude     = serializers.DecimalField(source='club.latitude', max_digits=9, decimal_places=6)
     club_longitude    = serializers.DecimalField(source='club.longitude', max_digits=9, decimal_places=6)
-    club_logo         = serializers.ImageField(source='club.logo')
+    club_id         = serializers.UUIDField(source='club.id')
     club_rating_avg   = serializers.DecimalField(source='club.rating_avg', max_digits=3, decimal_places=2)
     club_rating_count = serializers.IntegerField(source='club.rating_count')
 
@@ -636,7 +636,7 @@ class PitchSearchResultSerializer(serializers.ModelSerializer):
             # 'time_interval',
             'club_name', 'club_address',
             'club_latitude', 'club_longitude',
-            'club_logo',
+            'club_id',
             'club_open_time', 'club_close_time',
             'club_rating_avg', 'club_rating_count',
             # 'distance_km',
