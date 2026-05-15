@@ -4,7 +4,8 @@ from .views import (UnreadNotificationCountAPIView, CheckAvailabilityView,
                     DeleteUserImageAPIView, NotificationMarkAllReadView, 
                     NotificationMarkReadView, RegisterUserAPIView, TestNotificationView, 
                     UserDetailView, UserDeviceView, UserLoginAPIView, ManagerLoginAPIView, 
-                    UserUpdateView, NoteCreateView, NotificationListView, VersionCheckView)
+                    UserUpdateView, NoteCreateView, NotificationListView, VersionCheckView,
+                    SyrianGovernorateListAPI)
 from rest_framework_simplejwt.views import TokenVerifyView
 
 
@@ -27,6 +28,7 @@ urlpatterns = [
     path('notifications/<uuid:notification_id>/read/', NotificationMarkReadView.as_view()),
     path('notifications/read-all/', NotificationMarkAllReadView.as_view()),
     path("version-check/", VersionCheckView.as_view(), name="version-check"),
+    path("governorates/", SyrianGovernorateListAPI.as_view(), name="version-check"),
 
 
     path(

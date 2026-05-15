@@ -6,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView, View, csrf_exempt
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from core.governorates import SyrianGovernorate
+
 from .services.notification_service import NotificationService
 from .serializers import NotificationSerializer, UserDeviceSerializer, UserRegistrationSerializer, LoginSerializer, NoteSerializer
 from core.services.service_authentication import MyTokenObtainPairSerializer
@@ -17,6 +20,15 @@ from typing import Any, Dict, List, Tuple, Optional
 from django.utils.decorators import method_decorator
 
 from .pagination import NotificationPagination
+
+
+class SyrianGovernorateListAPI(APIView):
+    def get(self, request):
+        data = [
+                {"value": choice.value, "label": choice.label}
+                for choice in SyrianGovernorate
+            ]
+        return Response(data)
 
 
 class NotificationListView(generics.ListAPIView):
