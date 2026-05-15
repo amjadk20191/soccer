@@ -75,11 +75,10 @@ MIDDLEWARE = [
 load_dotenv()  # Load environment variables from .env file
 
 #FireBase  
-FIREBASE_PROJECT_ID = os.getenv('FIREBASE_PROJECT_ID')
-FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH')
+FIREBASE_PROJECT_ID = "matchtest-80d90"
+FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'match.json')
 
-#jobs helpers
-BOOKING_EXPIRY_HOURS = 0.01
+
 
 
 ROOT_URLCONF = 'soccer.urls'
@@ -96,6 +95,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
             ],
         },
+        'DIRS': [BASE_DIR / 'core' / 'templates'],
     },
 ]
 
@@ -209,5 +209,8 @@ MAX_NUM_DAY_BEFORE_BOOKING=10
 MIN_TEAM_MEMBERS = 1
 MIN_TEAM_MEMBERS_FOR_CHALLENGE = 1
 PAYMENT_REMINDER_MINUTES = 30
+#jobs helpers
+BOOKING_EXPIRY_HOURS = 0.01
+BOOKING_NOTIFICATIONS_EXPIRY_HOURS = 2
 
 STATIC_ROOT =  os.path.join(BASE_DIR,'api/static/static_api')

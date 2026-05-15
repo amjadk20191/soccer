@@ -7,6 +7,8 @@ from core.utils import upload_to_model_name
 
 import uuid
 
+from core.governorates import SyrianGovernorate
+
 
 
 class MemberStatus(models.IntegerChoices):
@@ -39,6 +41,8 @@ class Team(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    governorate = models.PositiveSmallIntegerField(choices=SyrianGovernorate.choices)
+
            
     
     class Meta:   
@@ -85,6 +89,10 @@ class TeamMember(models.Model):
             models.Index(fields=['player', 'status']),
             models.Index(fields=['player', 'team', 'status']),
             models.Index(fields=['team', 'status']),   
+             models.Index(
+                fields=['player', 'status', 'team'],
+                name='tm_player_active'
+            )
         ]
 
 

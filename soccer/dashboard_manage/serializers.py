@@ -116,13 +116,15 @@ class ReadEquipmentSerializer(serializers.ModelSerializer):
 
 
 class ClubManagerSerializer(serializers.ModelSerializer):
+    governorate = serializers.CharField(source='get_governorate_display')
+
     class Meta:
         model = Club
         fields = [
             'id',  'name', 'description', 'address',
             'latitude', 'longitude', 'open_time', 'close_time',
             'working_days', 'logo', 'rating_avg', 'rating_count',
-            'flexible_reservation','is_active'
+            'flexible_reservation','is_active', 'governorate'
         ]
         read_only_fields = [
             'id',
@@ -131,7 +133,8 @@ class ClubManagerSerializer(serializers.ModelSerializer):
             'longitude',
             'rating_avg',
             'rating_count',
-            'logo'
+            'logo',
+            'governorate'
         ]
         extra_kwargs = {
             'description': {

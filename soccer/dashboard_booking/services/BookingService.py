@@ -9,44 +9,99 @@ from core.services.notification_service import NotificationService
 from soccer.enm import BOOKING_STATUS_DENIED
 from django.db.models import Prefetch, QuerySet
 from django.db.models import Q
-
 from player_competition.models import Challenge, ChallengePlayerBooking, ChallengeStatus
 from player_team.models import MemberStatus, TeamMember
 from .EquipmentBookingService import EquipmentBookingService
+from django.db.models import F
 
 class BookingService:
     
     
     @classmethod
     @transaction.atomic
-    def owner_update_booking_status(cls, booking_id, status, club_id):
-        booking = get_object_or_404(
-            Booking.objects.select_for_update(), pk=booking_id, club_id=club_id
-            )
-                
-        match status:
-            case BookingStatus.PAY.value:
-                cls.convert_to_pay(booking)
-            case BookingStatus.REJECT.value:
-                cls.reject_booking(booking)
-            case BookingStatus.DISPUTED.value:
-                cls.disputed_booking(booking)
-            case BookingStatus.NO_SHOW.value:
-                cls.no_show_booking(booking)
-            case BookingStatus.CANCELED.value:
-                cls.owner_canceled_booking(booking)
-            case BookingStatus.COMPLETED.value:
-                cls.owner_completed_booking(booking)
-            case _:
-                raise ValidationError({"error": "الحالة غير صحيحة"})
+    def owner_update_booking_status(cls, booking_id, status, club_id=None, user_id=None):
+        
+        if club_id is None and user_id is None:
+            raise ValidationError({"error": "حدث خطأ"})
+        
+        elif club_id:
+            booking = get_object_or_404(
+                Booking.objects.select_for_update(), pk=booking_id, club_id=club_id
+                )
+            old_status = booking.get_status_display()
+                    
+            match status:
+                case BookingStatus.PAY.value:
+                    cls.convert_to_pay(booking)
+                    title='تم قبول طلب الحجز من قبل النادي... يرجى الدفع'
+                case BookingStatus.REJECT.value:
+                    cls.reject_booking(booking)
+                    title='تم رفض طلب الحجز من قبل النادي'
+                case BookingStatus.DISPUTED.value:
+                    cls.disputed_booking(booking)
+                    title='تم تغيير حالة الحجز من قبل النادي'
+                case BookingStatus.NO_SHOW.value:
+                    cls.no_show_booking(booking)
+                    title='تم تغيير حالة الحجز من قبل النادي'
+                case BookingStatus.CANCELED.value:
+                    cls.owner_canceled_booking(booking)
+                    title='تم الغاء الحجز من قبل النادي'
+                case BookingStatus.COMPLETED.value:
+                    cls.owner_completed_booking(booking)
+                    title='تم تغيير حالة الحجز من قبل النادي'
+                case _:
+                    raise ValidationError({"error": "الحالة غير صحيحة"})
             
-            
-        stuff=cls.get_club_workers(club_id)
+        elif user_id:   
+            booking = get_object_or_404(
+                Booking.objects.select_for_update(), pk=booking_id
+                )
+            old_status = booking.get_status_display()
+
+            match status:
+                case BookingStatus.CANCELED.value:
+                    cls.player_canceled_booking(booking, user_id)  
+                    title='تم الغاء الحجز من قبل اللاعب'
+                case _:
+                    raise ValidationError({"error": "الحالة غير صحيحة"}) 
+
+        stuff=cls.get_club_workers(booking.club_id)
+        
+        print(booking.date)
+        print(booking.start_time)
+        print(booking.end_time)
+        body = f"""
+
+إن الحجز في تاريخ: {booking.date}
+من الساعة {booking.start_time} الى {booking.end_time}
+تم تغيير حالته من {old_status} الى {booking.get_status_display()} 
+
+"""
+
         for user in stuff:
             NotificationService.send_notification(
                 user=user,
-                title='تغير حالة ',
-                body=f'تم تغيير حالة الحجز',
+                title=title,
+                body=body,
+                notification_type='Booking_status',
+                helper_id=booking.id,
+            )
+                
+        if booking.is_challenge:
+            players = list(ChallengePlayerBooking.objects.only('player').filter(booking_id=booking.id).distinct())
+            for cp in players:
+                NotificationService.send_notification(
+                    user=cp.player,
+                    title=title,
+                    body=body,
+                    notification_type='Booking_status',
+                    helper_id=booking.id,
+                )
+        elif booking.player is not None:
+            NotificationService.send_notification(
+                user=booking.player,
+                title=title,
+                body=body,
                 notification_type='Booking_status',
                 helper_id=booking.id,
             )
@@ -73,7 +128,11 @@ class BookingService:
 
             if challenge:
                 Challenge.objects.filter(id=challenge.id).update(status=ChallengeStatus.PAY)
-                # cls._seed_challenge_player_bookings(booking, challenge)
+                cls._seed_challenge_player_bookings(booking, challenge)
+        else:
+            if booking.player_id:
+                User.objects.filter(id=booking.player_id).update(
+                    booking_time=F('booking_time') + 1)
 
         booking.status = BookingStatus.PAY
         booking.save(update_fields=['status', 'updated_at'])
@@ -105,6 +164,19 @@ class BookingService:
         
         booking.status = BookingStatus.DISPUTED
         booking.save(update_fields=['status', 'updated_at'])
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.DISPUTED
+                )
+            players = ChallengePlayerBooking.objects.filter(booking_id=booking.id).values_list('player_id', flat=True)
+            
+            User.objects.filter(id__in=players).update(
+            disputed_time=F('disputed_time') + 1)
+        else:  
+            if booking.player_id:
+                User.objects.filter(id=booking.player_id).update(
+                    disputed_time=F('disputed_time') + 1)
+        
         return booking
 
     @classmethod
@@ -116,6 +188,21 @@ class BookingService:
         
         booking.status = BookingStatus.NO_SHOW
         booking.save(update_fields=['status', 'updated_at'])
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.NO_SHOW)
+            
+            players = ChallengePlayerBooking.objects.filter(booking_id=booking.id).values_list('player_id', flat=True)
+            
+            User.objects.filter(id__in=players).update(
+            no_show_time=F('no_show_time') + 1)
+        else:    
+            if booking.player_id:
+                User.objects.filter(id=booking.player_id).update(
+                    no_show_time=F('no_show_time') + 1)
+            
+
+
         return booking
     
     @classmethod
@@ -131,6 +218,8 @@ class BookingService:
 
         booking.status = BookingStatus.CANCELED
         booking.save(update_fields=['status', 'updated_at'])
+        
+        
         return booking
     
     @classmethod
@@ -142,6 +231,10 @@ class BookingService:
 
         booking.status = BookingStatus.COMPLETED
         booking.save(update_fields=['status', 'updated_at'])
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.ACCEPTED)
+
         return booking
     
     @classmethod
@@ -188,7 +281,8 @@ class BookingService:
         if has_overlap:
             raise ValidationError({"error": "لا يمكن تأكيد هذا الحجز بسبب وجود حجز آخر يتداخل مع نفس الملعب في نفس الوقت."})
         
-        equipments=BookingEquipment.objects.values('equipment_id','quantity').filter(booking_id=booking.id)
+        equipments = list(BookingEquipment.objects.values('equipment_id', 'quantity').filter(booking_id=booking.id))
+
         if equipments:
             equipment_ids = [ equipment['equipment_id'] for equipment in equipments]
 
@@ -208,7 +302,9 @@ class BookingService:
             print(new_booked_map)
             print("equipment_quantities")
             print(equipment_quantities)
-            club_equipments = ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=booking.club_id, is_active=True, id__in=equipment_ids, is_deteted=False)
+            club_equipments = list(ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(
+                club_id=booking.club_id, is_active=True, id__in=equipment_ids, is_deteted=False
+            ))
             print(club_equipments)
             print(":::::::::::::::::::::::::::::::::")
             print(equipment_ids)
@@ -226,17 +322,20 @@ class BookingService:
                                         "id": equipment["id"],
                                         })
 
+
     @classmethod
     def _seed_challenge_player_bookings(cls, booking, challenge):
         """Bulk-insert active players from both challenge teams into ChallengePlayerBooking."""
-        active_members = (
+        active_members = list(
             TeamMember.objects
             .filter(
                 team_id__in=[challenge.team_id, challenge.challenged_team_id],
                 status=MemberStatus.ACTIVE,
             )
-            .values_list('player_id', 'team_id')  # fetch both in one query
+            .values_list('player_id', 'team_id')
         )
+
+        player_ids = [player_id for player_id, _ in active_members]
 
         try:
             ChallengePlayerBooking.objects.bulk_create(
@@ -254,23 +353,12 @@ class BookingService:
             raise ValidationError({
                 "error": "لاعبون مسجلون مسبقاً في هذه المباراة"
             })
-        
-        
-    ################################## Player
-    @classmethod
-    @transaction.atomic
-    def player_canceled_booking(cls, booking):
-        """CANCELED booking (from Completed or Pending_pay) by player"""
-        if not(booking.status in [BookingStatus.COMPLETED, BookingStatus.PENDING_PAY]):
-            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (من قبل اللاعب) يمكن إلغاؤها"})
 
-        if booking.is_challenge:
-            Challenge.objects.filter(booking_id=booking.id).update(
-                status=ChallengeStatus.CANCELED)
-
-        booking.status = BookingStatus.CANCELED
-        booking.save(update_fields=['status', 'updated_at'])
-        return booking
+        
+        User.objects.filter(id__in=player_ids).update(
+            booking_time=F('booking_time') + 1,
+            challenge_time=F('challenge_time') + 1,
+        )
     
     @classmethod
     def get_club_workers(cls, club_id) -> QuerySet:
@@ -280,3 +368,36 @@ class BookingService:
         ).distinct()
     
 
+    ################################## Player
+    @classmethod
+    @transaction.atomic
+    def player_canceled_booking(cls, booking, user_id):
+        """CANCELED booking (from Completed or Pending_pay) by player"""
+        if not(booking.status in [BookingStatus.COMPLETED, BookingStatus.PENDING_PAY]):
+            raise ValidationError({"error": "فقط الحجوزات التي في حالة مكتملة أو في انتظار الدفع (من قبل اللاعب) يمكن إلغاؤها"})
+
+        if booking.is_challenge:
+            players = list(ChallengePlayerBooking.objects.filter(booking_id=booking.id).values_list('player_id', flat=True))
+            if not(user_id in players):
+                raise ValidationError({"error": "لست جزء من التحدي"})
+
+            Challenge.objects.filter(booking_id=booking.id).update(
+                status=ChallengeStatus.CANCELED)
+            if booking.status == BookingStatus.PENDING_PAY:
+                User.objects.filter(id__in=players).update(
+                cancel_time=F('cancel_time') + 1)
+        
+        else:
+            if booking.status == BookingStatus.PENDING_PAY:
+
+                if booking.player_id is not None and booking.player_id==user_id:
+                    User.objects.filter(id=user_id).update(
+                        cancel_time=F('cancel_time') + 1)
+                else:
+                    raise ValidationError({"error": "لا يمكنك الغاء الحجز"})
+        
+                
+
+        booking.status = BookingStatus.CANCELED
+        booking.save(update_fields=['status', 'updated_at'])
+        return booking

@@ -19,14 +19,16 @@ def _is_upcoming(time, date):
 TEAM_RESULT_FILTERS = {
     # Won: played + team scored more
     'فوز': lambda team_id, time, date: (
-        _is_played(time, date) & (
+        _is_played(time, date) & 
+        Q(score_finalized=True) & (
             Q(team_id=team_id,            result_team__gt=F('result_challenged_team')) |
             Q(challenged_team_id=team_id, result_challenged_team__gt=F('result_team'))
         )
     ),
     # Lost: played + team scored less
     'خسارة': lambda team_id, time, date: (
-        _is_played(time, date) & (
+        _is_played(time, date) & 
+        Q(score_finalized=True) & (
             Q(team_id=team_id,            result_team__lt=F('result_challenged_team')) |
             Q(challenged_team_id=team_id, result_challenged_team__lt=F('result_team'))
         )
@@ -34,11 +36,17 @@ TEAM_RESULT_FILTERS = {
     # Draw: played + scores are equal + team is participant
     'تعادل': lambda team_id, time, date: (
         _is_played(time, date) &
+        Q(score_finalized=True) &
         Q(result_team=F('result_challenged_team'))
     ),
     # Upcoming: date/time hasn't arrived yet + team is participant
     'قريباً': lambda team_id, time, date: (
-        _is_upcoming(time, date)),
+        _is_upcoming(time, date)&
+        Q(score_finalized=False)),
+    'لم_يتم_التصويت': lambda team_id, time, date: (
+        _is_played(time, date) &
+        Q(score_finalized=False)
+    ),
 }
 
 

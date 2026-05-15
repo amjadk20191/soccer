@@ -66,7 +66,11 @@ class Challenge(models.Model):
             models.Index(fields=['team']),
             models.Index(fields=['challenged_team']),
             models.Index(fields=['status', 'created_at']),
-
+            models.Index(
+                fields=['status', 'created_at'],
+                name='challenge_pending_null',
+                condition=models.Q(booking__isnull=True)   # only challenges without a booking
+            ),
         ]
     
 
@@ -78,6 +82,8 @@ class ChallengePlayerBooking(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE)
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE)
     player = models.ForeignKey(User, on_delete=models.CASCADE)
+    score_done = models.BooleanField(default=False)
+    rate_done = models.BooleanField(default=False)
 
 
     class Meta:
@@ -89,6 +95,10 @@ class ChallengePlayerBooking(models.Model):
         ]
         indexes = [
         models.Index(fields=['booking_id', 'player_id']),
+        models.Index(
+                fields=['player_id', 'booking_id'],
+                name='cpb_player_booking'
+            )
         ]
 
 class ScoreSubmission(models.Model):

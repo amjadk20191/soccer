@@ -5,7 +5,10 @@ from .views import (BookingPriceForUserAPIView, EquipmentAvailabilityForUserView
                     ClubOpeningPrices, BookingCreateForUser, ShowBookingDurationForClub, 
                     CouponCreateView, PitchSearchView,
                     # BookingStatusListView, 
-                    ClubReviewListView, StatusKeysForUserBookingListAPIView, ShowBookingDepositForClub, ReviewCreateView, UserBookingListView, UserBookingDetailView)
+                    PendingActionListView, PlayerConvertBookingAPIView,
+                    ClubReviewListView, StatusKeysForUserBookingListAPIView,
+                    ShowBookingDepositForClub, ReviewCreateView, UserBookingListView, 
+                    UserBookingDetailView)
 
 
 urlpatterns = [
@@ -24,8 +27,13 @@ urlpatterns = [
     path('reviews/club/<uuid:club_id>/', ClubReviewListView.as_view()),
     # path('booking-status/', BookingStatusListView.as_view(), name='Booking Status'),
     path('booking-status/', StatusKeysForUserBookingListAPIView.as_view(), name='Booking Status'),
-
+    path('bookings-pending-actions/', PendingActionListView.as_view(), name='pending-actions'),
 
     path('add-coupon/', CouponCreateView.as_view(), name='add-coupon'),
     path('pitches/search/', PitchSearchView.as_view(), name='pitch-search'),
+    path(
+        'cancel/<uuid:pk>/',
+        PlayerConvertBookingAPIView.as_view(),
+        name='player-convert-booking'
+    ),
 ]

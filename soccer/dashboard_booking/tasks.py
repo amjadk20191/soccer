@@ -1,18 +1,50 @@
-
 from django.conf import settings
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
+from django.db.models import Q
 from player_booking.models import Booking, BookingStatus, Review
+from core.models import User
 from core.services.notification_service import NotificationService
 from player_competition.models import ChallengePlayerBooking, Challenge, ChallengeStatus
 from django.db import models
+from django.db.models import F, ExpressionWrapper, DateTimeField
+from dashboard_booking.models import BookingNotification
+
+# ── shared helper ─────────────────────────────────────────────────────────────
+
+def _get_club_workers(club_id):
+    """Returns manager + all staff for a club as a queryset."""
+    return User.objects.filter(
+        Q(club__id=club_id) |         # manager  (related_name="club")
+        Q(clubstaff__club_id=club_id) # staff
+    ).distinct()
+
+
+def _notify_club_workers(club, title, body, notification_type, helper_id):
+    """Send the same notification to every worker (manager + staff) of a club."""
+    if not club:
+        return
+    for worker in _get_club_workers(club.id):
+        try:
+            NotificationService.send_notification(
+                user=worker,
+                title=title,
+                body=body,
+                notification_type=notification_type,
+                helper_id=helper_id,
+            )
+        except Exception as e:
+            print(f'  club worker {worker} notification failed: {e}')
+
+
+# ── tasks ─────────────────────────────────────────────────────────────────────
 
 def remind_owner_before_booking():
     now = timezone.localtime(timezone.now())
     today = now.date()
 
-    time_start = (now + timedelta(minutes=5)).time()
-    time_end   = (now + timedelta(minutes=40)).time()
+    time_start = (now + timedelta(minutes=120)).time()
+    time_end   = (now + timedelta(minutes=200)).time()
 
     bookings = Booking.objects.filter(
         date=today,
@@ -25,35 +57,22 @@ def remind_owner_before_booking():
         ]
     ).select_related('club__manager', 'player', 'pitch')
 
-    
-
     for booking in bookings:
-        owner       = booking.club.manager if booking.club else None
-        player      = booking.player
-        pitch_name  = booking.pitch.name if hasattr(booking.pitch, 'name') else 'الملعب'
-        start_str   = booking.start_time.strftime('%H:%M')
+        player     = booking.player
+        pitch_name = booking.pitch.name if hasattr(booking.pitch, 'name') else 'الملعب'
+        start_str  = booking.start_time.strftime('%H:%M')
         player_name = player.full_name if player else 'لاعب'
 
-        
+        # ── Notify all club workers (manager + staff) ──────────────
+        _notify_club_workers(
+            club=booking.club,
+            title='تذكير بحجز قادم',
+            body=f'لديك حجز في {pitch_name} الساعة {start_str} من {player_name}',
+            notification_type='booking_reminder',
+            helper_id=booking.id,
+        )
 
-        # ── Notify owner ──────────────────────────────
-        if owner:
-            try:
-                NotificationService.send_notification(
-                    user=owner,
-                    title='تذكير بحجز قادم',
-                    body=f'لديك حجز في {pitch_name} الساعة {start_str} من {player_name}',
-                    notification_type='booking_reminder',
-                    helper_id=booking.id,
-
-                )
-                
-            except Exception as e:
-                print(f'  owner notification failed: {e}')
-        
-            
-
-        # ── Notify player ─────────────────────────────
+        # ── Notify player ──────────────────────────────────────────
         if player:
             try:
                 NotificationService.send_notification(
@@ -62,26 +81,21 @@ def remind_owner_before_booking():
                     body=f'حجزك في {pitch_name} سيبدأ الساعة {start_str}، استعد!',
                     notification_type='booking_reminder',
                     helper_id=booking.id,
-
                 )
-                
             except Exception as e:
                 print(f'  player notification failed: {e}')
-        
 
-        # always mark reminded even if notification failed
         booking.owner_reminded = True
         booking.save(update_fields=['owner_reminded'])
-        
+
+
 def notify_players_to_rate():
     """
     Runs every 5 minutes.
     Finds completed bookings where end_time has passed.
-    Regular booking → notify the player who booked.
+    Regular booking  → notify the player who booked.
     Challenge booking → notify all players in ChallengePlayerBooking.
     """
-    
-
     now      = timezone.localtime(timezone.now())
     today    = now.date()
     now_time = now.time()
@@ -99,7 +113,6 @@ def notify_players_to_rate():
         pitch_name = booking.pitch.name if hasattr(booking.pitch, 'name') else 'الملعب'
 
         if booking.is_challenge:
-            # notify all players who played
             challenge_players = ChallengePlayerBooking.objects.filter(
                 booking=booking
             ).select_related('player')
@@ -108,15 +121,9 @@ def notify_players_to_rate():
 
             for cp in challenge_players:
                 player = cp.player
-                already_rated = Review.objects.filter(
-                    booking=booking,
-                    player=player
-                ).exists()
-
-                if already_rated:
+                if Review.objects.filter(booking=booking, player=player).exists():
                     print(f'    player {player} already rated, skip')
                     continue
-
                 try:
                     NotificationService.send_notification(
                         user=player,
@@ -130,21 +137,14 @@ def notify_players_to_rate():
                     print(f'    player {player} notification failed: {e}')
 
         else:
-            # notify only the player who booked
             player = booking.player
-
             if not player:
                 print(f'  no player for booking {booking.id}, skip')
                 booking.rate_notified = True
                 booking.save(update_fields=['rate_notified'])
                 continue
 
-            already_rated = Review.objects.filter(
-                booking=booking,
-                player=player
-            ).exists()
-
-            if already_rated:
+            if Review.objects.filter(booking=booking, player=player).exists():
                 print(f'  player {player} already rated, skip')
             else:
                 try:
@@ -162,14 +162,12 @@ def notify_players_to_rate():
         booking.rate_notified = True
         booking.save(update_fields=['rate_notified'])
 
+
 def notify_players_to_submit_score():
     """
     Runs every 5 minutes.
-    Finds challenge bookings that have ended
-    and notifies all players to submit their score.
+    Finds challenge bookings that have ended and notifies all players to submit their score.
     """
-    
-
     now      = timezone.localtime(timezone.now())
     today    = now.date()
     now_time = now.time()
@@ -213,30 +211,43 @@ def notify_players_to_submit_score():
         challenge.score_notified = True
         challenge.save(update_fields=['score_notified'])
 
+
 def remind_player_to_pay():
     """
     Runs every 5 minutes.
-    Finds bookings with PENDING_PAY status where 
-    PAYMENT_REMINDER_MINUTES have passed since creation.
-    Sends a reminder to the player to complete payment.
+    Finds bookings with PAY status where PAYMENT_REMINDER_MINUTES have passed.
+    Notifies the player AND all club workers.
     """
-    reminder_minutes = getattr(settings, 'PAYMENT_REMINDER_MINUTES', 30)
-    reminder_time    = timezone.now() - timedelta(minutes=reminder_minutes)
+    # reminder_minutes = getattr(settings, 'PAYMENT_REMINDER_MINUTES', 30)
+    # reminder_time    = timezone.now() - timedelta(minutes=reminder_minutes)
 
-    bookings = Booking.objects.filter(
+    bookings = list(Booking.objects.filter(
         status=BookingStatus.PAY,
-        created_at__lte=reminder_time,
-        pay_reminded=False,
-    ).select_related('player', 'pitch', 'club')
+        # created_at__lte=reminder_time,
+        # pay_reminded=False,
+    ).select_related('player', 'pitch', 'club'))
 
-    print(f'[pay_reminder] found {bookings.count()} bookings')
+    # print(f'[pay_reminder] found {bookings.count()} bookings')
 
     for booking in bookings:
         player     = booking.player
         pitch_name = booking.pitch.name if hasattr(booking.pitch, 'name') else 'الملعب'
 
-        if player:
-            try:
+        # ── Notify player ──────────────────────────────────────────
+
+        if booking.is_challenge:
+            players = list(ChallengePlayerBooking.objects.only('player').filter(booking_id=booking.id).distinct())
+            for cp in players:
+                NotificationService.send_notification(
+                    user=cp.player,
+                    title='تذكير بالدفع',
+                    body=f'لديك حجز غير مدفوع في {pitch_name} بتاريخ {booking.date}، يرجى إتمام الدفع.',
+                    notification_type='payment_reminder',
+                    helper_id=booking.id,
+                 )
+            
+        else:
+            if player:
                 NotificationService.send_notification(
                     user=player,
                     title='تذكير بالدفع',
@@ -244,19 +255,17 @@ def remind_player_to_pay():
                     notification_type='payment_reminder',
                     helper_id=booking.id,
                 )
-                print(f'  player {player} notified ✅')
-            except Exception as e:
-                print(f'  player notification failed: {e}')
+        
 
-        booking.pay_reminded = True
+        # booking.pay_reminded = True
         booking.save(update_fields=['pay_reminded'])
 
 
 def expire_pending_bookings():
     """
     Runs every 5 minutes.
-    Finds bookings that are still pending after BOOKING_EXPIRY_HOURS
-    and marks them as expired.
+    Finds bookings still pending after BOOKING_EXPIRY_HOURS and marks them expired.
+    Notifies the player AND all club workers.
     """
     expiry_hours = getattr(settings, 'BOOKING_EXPIRY_HOURS', 2)
     expiry_time  = timezone.now() - timedelta(hours=expiry_hours)
@@ -264,7 +273,6 @@ def expire_pending_bookings():
     bookings = Booking.objects.filter(
         status__in=[
             BookingStatus.PAY,
-            BookingStatus.PENDING_PLAYER,
         ],
         created_at__lte=expiry_time,
     ).select_related('club__manager', 'player', 'pitch')
@@ -272,41 +280,133 @@ def expire_pending_bookings():
     print(f'[expire_bookings] found {bookings.count()} bookings to expire')
 
     for booking in bookings:
-        owner  = booking.club.manager if booking.club else None
-        player = booking.player
+        player     = booking.player
+        pitch_name = booking.pitch.name
 
-        # change status to expired
         booking.status = BookingStatus.EXPIRED
         booking.save(update_fields=['status'])
-
         print(f'  expired booking: {booking.id}')
 
-        # notify owner
-        if owner:
-            try:
-                NotificationService.send_notification(
-                    user=owner,
-                    title='انتهت صلاحية الحجز',
-                    body=f'انتهت صلاحية الحجز في {booking.pitch.name} بتاريخ {booking.date}',
-                    notification_type='booking_expired',
-                    helper_id=booking.id,
+        # ── Notify all club workers (manager + staff) ──────────────
+        _notify_club_workers(
+            club=booking.club,
+            title='انتهت صلاحية الحجز',
+            body=f'انتهت صلاحية الحجز في {pitch_name} بتاريخ {booking.date}',
+            notification_type='booking_expired',
+            helper_id=booking.id,
+        )
 
-                )
-                print(f'  owner notified ✅')
-            except Exception as e:
-                print(f'  owner notification failed: {e}')
+        # ── Notify player ──────────────────────────────────────────
+        if booking.is_challenge:
+            Challenge.objects.filter(booking_id=booking.id).update(status=ChallengeStatus.EXPIRED)
+            players = list(ChallengePlayerBooking.objects.only('player').filter(booking_id=booking.id).distinct())
 
-        # notify player
-        if player:
-            try:
+            User.objects.filter(id__in=players).update(expired_time=F('expired_time') + 1)
+            for cp in players:
                 NotificationService.send_notification(
-                    user=player,
+                    user=cp.player,
                     title='انتهت صلاحية حجزك',
-                    body=f'انتهت صلاحية حجزك في {booking.pitch.name} بتاريخ {booking.date}، يرجى الحجز مجدداً.',
+                    body=f'انتهت صلاحية حجزك في {pitch_name} بتاريخ {booking.date}، يرجى الحجز مجدداً.',
                     notification_type='booking_expired',
                     helper_id=booking.id,
-
                 )
                 print(f'  player notified ✅')
-            except Exception as e:
-                print(f'  player notification failed: {e}')
+
+        else:
+            if player:
+                    NotificationService.send_notification(
+                        user=player,
+                        title='انتهت صلاحية حجزك',
+                        body=f'انتهت صلاحية حجزك في {pitch_name} بتاريخ {booking.date}، يرجى الحجز مجدداً.',
+                        notification_type='booking_expired',
+                        helper_id=booking.id,
+                    )
+                    User.objects.filter(id=booking.player_id).update(
+                        disputed_time=F('disputed_time') + 1)
+                    print(f'  player notified ✅')
+
+
+def reject_pending_manager_bookings():
+
+
+    now = timezone.now()
+
+    expired_booking_qs = (
+        Booking.objects
+        .filter(status=BookingStatus.PENDING_MANAGER)
+        .annotate(
+            booking_end=ExpressionWrapper(
+                F('date') + F('end_time'),
+                output_field=DateTimeField()
+            )
+        )
+        .filter(
+            booking_end__lte=now
+        )
+    )
+
+    # update bookings
+    updated_bookings = expired_booking_qs.update(
+        status=BookingStatus.REJECT
+    )
+
+    # expire related challenges
+    updated_challenges = Challenge.objects.filter(
+        booking_id__in=expired_booking_qs.values_list('id', flat=True)
+    ).update(
+        status=ChallengeStatus.REJECTED
+    )
+
+    print(
+        f'[reject_pending_manager] '
+        f'bookings={updated_bookings}, '
+        f'challenges={updated_challenges}'
+    )
+
+
+def reject_expired_booking_notifications():
+    
+    expire_time = getattr(settings, 'BOOKING_NOTIFICATIONS_EXPIRY_HOURS', 2)
+    expiry_time = timezone.now() - timedelta(hours=expire_time)
+
+    updated = (
+        BookingNotification.objects
+        .filter(
+            status=1,  # Pending
+            created_at__lte=expiry_time
+        )
+        .update(
+            status=3  # Reject
+        )
+    )
+
+    print(f'[reject_booking_notifications] updated {updated} notifications')
+
+
+
+def reject_expired_pending_team_challenges():
+
+
+    now = timezone.now()
+
+    updated = (
+        Challenge.objects
+        .filter(
+            booking__isnull=True,
+            status=ChallengeStatus.PENDING_TEAM,
+        )
+        .annotate(
+            challenge_end=ExpressionWrapper(
+                F('date') + F('end_time'),
+                output_field=DateTimeField()
+            )
+        )
+        .filter(
+            challenge_end__lte=now
+        )
+        .update(
+            status=ChallengeStatus.REJECTED
+        )
+    )
+
+    print(f'[reject_pending_team] updated {updated} challenges')

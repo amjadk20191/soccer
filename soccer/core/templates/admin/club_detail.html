@@ -1,0 +1,226 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#0b0d12;--surface:#11141c;--surface2:#181c27;--border:#1e2435;
+    --g:#4ade80;--b:#60a5fa;--o:#fb923c;--r:#f87171;--y:#facc15;--p:#f472b6;--muted:#64748b;--text:#e2e8f0;
+    --radius:12px;
+  }
+  body,#container{background:var(--bg)!important;color:var(--text)!important;font-family:'DM Mono',monospace!important;}
+  #header{background:var(--surface)!important;border-bottom:1px solid var(--border)!important;box-shadow:none!important;}
+  #branding h1 a{color:var(--g)!important;font-family:'Syne',sans-serif!important;font-weight:800!important;}
+  #nav-sidebar{background:var(--surface)!important;border-right:1px solid var(--border)!important;}
+  #content,#content-main{background:var(--bg)!important;}
+  .breadcrumbs{background:var(--surface)!important;border-bottom:1px solid var(--border)!important;color:var(--muted)!important;}
+  a{color:var(--b)!important;} a:hover{color:var(--g)!important;}
+  #nav-sidebar a{color:var(--text)!important;font-size:12px!important;}
+
+  /* page header */
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;gap:16px;}
+  .page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
+  .page-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .back-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text)!important;font-size:12px;text-decoration:none!important;white-space:nowrap;transition:border-color .15s;}
+  .back-btn:hover{border-color:var(--g);}
+
+  /* club info strip */
+  .club-strip{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:24px;}
+  .club-logo{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--border);}
+  .club-logo-ph{width:56px;height:56px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:24px;}
+  .club-info .name{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--text);}
+  .club-info .meta{font-size:11px;color:var(--muted);margin-top:3px;}
+  .club-kpis{display:flex;gap:24px;margin-left:auto;}
+  .ck{text-align:center;}
+  .ck-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1;}
+  .ck-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+
+  /* section label */
+  .sec-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:28px 0 12px;display:flex;align-items:center;gap:8px;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* pitch cards */
+  .pitch-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden;animation:up .4s ease both;}
+  .pitch-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+  .pitch-head:hover{background:#1e2335;}
+  .pitch-left{display:flex;align-items:center;gap:12px;}
+  .pitch-icon{width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--border);}
+  .pitch-icon-ph{width:36px;height:36px;border-radius:8px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .pitch-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+  .pitch-type{font-size:10px;color:var(--muted);margin-top:2px;}
+  .pitch-right{display:flex;align-items:center;gap:16px;}
+  .pitch-total{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--b);}
+  .pitch-total-lbl{font-size:10px;color:var(--muted);}
+  .chevron{color:var(--muted);font-size:12px;transition:transform .2s;}
+  .chevron.open{transform:rotate(180deg);}
+
+  /* status pills row */
+  .status-pills{display:flex;flex-wrap:wrap;gap:8px;padding:14px 20px;border-bottom:1px solid var(--border);}
+  .sp{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;}
+
+  /* recent bookings mini table */
+  .pitch-body{padding:0;}
+  .dt{width:100%;border-collapse:collapse;font-size:12px;}
+  .dt th{padding:9px 16px;color:var(--muted);font-size:10px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--surface2);font-weight:400;text-align:left;}
+  .dt td{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.03);}
+  .dt tr:last-child td{border-bottom:none;}
+  .dt tr:hover td{background:rgba(255,255,255,.02);}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:.05em;}
+  .bg{background:rgba(74,222,128,.12);color:#4ade80;}
+  .bb{background:rgba(96,165,250,.12);color:#60a5fa;}
+  .bo{background:rgba(251,146,60,.12);color:#fb923c;}
+  .br{background:rgba(248,113,113,.12);color:#f87171;}
+  .by{background:rgba(250,204,21,.12);color:#facc15;}
+  .bm{background:rgba(100,116,139,.12);color:#94a3b8;}
+
+  .empty{padding:20px 16px;color:var(--muted);font-size:12px;text-align:center;}
+  .no-pitches{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
+  .pitch-content{display:none;}
+  .pitch-content.open{display:block;}
+
+  @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  <!-- page header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏟 &nbsp;{{ club.name }}</div>
+      <div class="page-sub">{{ club.address }} &nbsp;·&nbsp; {{ club.open_time|time:"H:i" }} – {{ club.close_time|time:"H:i" }}</div>
+    </div>
+    <a class="back-btn" href="/admin/clubs-overview/">← All Clubs</a>
+  </div>
+
+  <!-- club info strip -->
+  <div class="club-strip">
+    {% if club.logo %}
+      <img class="club-logo" src="{{ club.logo.url }}" alt="{{ club.name }}">
+    {% else %}
+      <div class="club-logo-ph">🏟</div>
+    {% endif %}
+    <div class="club-info">
+      <div class="name">{{ club.name }}</div>
+      <div class="meta">Manager: {{ club.manager.full_name|default:club.manager.phone }}</div>
+      <div class="meta">Rating: ★ {{ club.rating_avg }} ({{ club.rating_count }} reviews)</div>
+    </div>
+    <div class="club-kpis">
+      <div class="ck">
+        <div class="ck-num" style="color:var(--text)">{{ pitches|length }}</div>
+        <div class="ck-lbl">Pitches</div>
+      </div>
+      {% with total_bookings=0 %}
+      <div class="ck">
+        <div class="ck-num" style="color:var(--b)">
+          {% for p in pitches %}{% if forloop.first %}{{ p.total }}{% endif %}{% endfor %}
+        </div>
+        <div class="ck-lbl">Bookings</div>
+      </div>
+      {% endwith %}
+    </div>
+  </div>
+
+  <!-- pitches -->
+  <div class="sec-label">⚽ Pitches & Bookings</div>
+
+  {% if pitches %}
+    {% for p in pitches %}
+    <div class="pitch-card" style="animation-delay:{{ forloop.counter0 }}00ms">
+
+      <!-- collapsible header -->
+      <div class="pitch-head" onclick="toggle('pitch-{{ forloop.counter }}')">
+        <div class="pitch-left">
+          {% if p.obj.image %}
+            <img class="pitch-icon" src="{{ p.obj.image.url }}" alt="{{ p.obj.name }}">
+          {% else %}
+            <div class="pitch-icon-ph">⚽</div>
+          {% endif %}
+          <div>
+            <div class="pitch-name">{{ p.obj.name }}</div>
+            <div class="pitch-type">{{ p.obj.type }} &nbsp;·&nbsp; {{ p.obj.size_width }}×{{ p.obj.size_high }}m &nbsp;·&nbsp; {{ p.obj.price_first }} / {{ p.obj.price_second }}</div>
+          </div>
+        </div>
+        <div class="pitch-right">
+          <div>
+            <div class="pitch-total">{{ p.total }}</div>
+            <div class="pitch-total-lbl">bookings</div>
+          </div>
+          <span class="chevron" id="chev-pitch-{{ forloop.counter }}">▼</span>
+        </div>
+      </div>
+
+      <!-- expandable content -->
+      <div class="pitch-content {% if forloop.first %}open{% endif %}" id="pitch-{{ forloop.counter }}">
+
+        <!-- status pills -->
+        {% if p.statuses %}
+        <div class="status-pills">
+          {% for s in p.statuses %}
+          <div class="sp badge {{ s.css }}">
+            {{ s.label }}: <strong style="margin-left:4px;">{{ s.count }}</strong>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- recent bookings table -->
+        {% if p.recent %}
+        <div class="pitch-body">
+          <table class="dt">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Player</th>
+                <th>Price</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in p.recent %}
+              <tr>
+                <td>{{ b.date }}</td>
+                <td style="color:var(--muted);font-size:11px;">{{ b.start|time:"H:i" }} – {{ b.end|time:"H:i" }}</td>
+                <td>{{ b.player }}</td>
+                <td style="color:var(--g);">{{ b.price }}</td>
+                <td><span class="badge {{ b.status_css }}">{{ b.status_lbl }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <div class="empty">No bookings for this pitch yet.</div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endfor %}
+
+  {% else %}
+    <div class="no-pitches">No pitches found for this club.</div>
+  {% endif %}
+
+</div>
+
+<script>
+  // open first chevron by default
+  document.addEventListener('DOMContentLoaded', () => {
+    const first = document.getElementById('chev-pitch-1');
+    if (first) first.classList.add('open');
+  });
+
+  function toggle(id) {
+    const content = document.getElementById(id);
+    const num     = id.split('-')[1];
+    const chev    = document.getElementById('chev-pitch-' + num);
+    content.classList.toggle('open');
+    chev.classList.toggle('open');
+  }
+</script>
+{% endblock %}

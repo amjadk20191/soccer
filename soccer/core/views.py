@@ -16,6 +16,74 @@ from .models import AppVersion, Notification, User
 from typing import Any, Dict, List, Tuple, Optional
 from django.utils.decorators import method_decorator
 
+from .pagination import NotificationPagination
+
+
+class NotificationListView(generics.ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = NotificationPagination
+
+    def get_queryset(self):
+        queryset = (
+            Notification.objects
+            .filter(user=self.request.user)
+            .only(
+                'id',
+                'title',
+                'message',
+                'is_read',
+                'notification_type',
+                'helper_id',
+                'created_at',
+            )
+            .order_by('-created_at')
+        )
+
+        # filter unread only
+        unread_only = self.request.query_params.get('unread')
+
+        if unread_only == 'true':
+            queryset = queryset.filter(is_read=False)
+
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+
+        page = self.paginate_queryset(queryset)
+
+        unread_ids = [
+            n.id for n in page if not n.is_read
+        ]
+        serializer = self.get_serializer(page, many=True)
+
+        if unread_ids:
+            Notification.objects.filter(
+                id__in=unread_ids
+            ).update(is_read=True)
+
+
+
+        return self.get_paginated_response(serializer.data)
+    
+
+
+class UnreadNotificationCountAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        unread_count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).count()
+
+        return Response({
+            'unread_count': unread_count
+        })
+
+
+
 class RegisterUserAPIView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
@@ -99,14 +167,6 @@ class CheckAvailabilityView(APIView):
         return Response(result)
 
 
-class NotificationListView(generics.ListAPIView):
-    serializer_class   = NotificationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Notification.objects.filter(
-            user=self.request.user
-        ).order_by('-created_at')
 
 
 class NotificationMarkReadView(APIView):
@@ -217,7 +277,9 @@ class VersionCheckView(GenericApiView):
             "latest_version": latest.version,
             "download_url": latest.download_url if update_available else "",
             "release_notes": latest.release_notes if update_available else "",
+            "is_maintenance": latest.is_maintenance,  # <-- ADDED
         })
+
     
     def get_latest_version(self, app_type: str, platform: str) -> Optional[AppVersion]:
         try:
@@ -318,6 +380,7 @@ class UserLoginAPIView(APIView):
             'challenge_time': user.challenge_time,
             'cancel_time': user.cancel_time,
             'image': request.build_absolute_uri(user.image.url) if user.image else None,
+            'governorate': user.get_governorate_display()
 
             # 'user_id': user.id,
             # 'role': user.role,

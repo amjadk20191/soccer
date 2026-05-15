@@ -50,7 +50,9 @@ class PlayerProfileService:
                 'id', 'full_name', 'username',
                 'image', 'birthday',
                 'height', 'weight', 'foot_preference',
-                'booking_time', 'cancel_time', 'disputed_time', 'no_show_time'
+                'booking_time', 'cancel_time', 'disputed_time', 'no_show_time', 'expired_time',
+                'challenge_time', 'challenge_wins', 'challenge_losses', 'challenge_draw',
+                'governorate'
             )
             .first()
         )

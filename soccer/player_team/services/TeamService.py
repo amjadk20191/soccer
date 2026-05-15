@@ -15,7 +15,7 @@ class TeamService:
     """
     
     @classmethod
-    def create_team(cls, captain_id, name, logo=None, time=None, address=None):
+    def create_team(cls, captain_id, name, logo=None, time=None, address=None, governorate=None):
         """
         Create a new team with the authenticated user as captain.
         
@@ -54,7 +54,8 @@ class TeamService:
                 logo=logo,
                 time=time.strip() if time else '',
                 address=address.strip() if address else '',
-                captain_id=captain_id
+                captain_id=captain_id,
+                governorate=governorate,
             )
             
             # Create team member (captain)

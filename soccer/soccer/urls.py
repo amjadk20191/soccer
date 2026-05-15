@@ -2,8 +2,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
+import soccer.admin_site
+
+
 
 urlpatterns = [
+    # path('admin/', admin.site.urls),
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
     path('api/dashboard/booking/', include('dashboard_booking.urls')),

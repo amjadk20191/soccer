@@ -70,7 +70,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             return BookingRescheduleSerializer
         elif  self.action == 'convert_booking':
             return BookingConvertStatusSerializer
-        elif  self.action == 'by_day_time_pitch':
+        elif  self.action == 'by_day_time_pitch' or self.action == 'by_day_time_pitch_char':
             return BookingListPitchSerializer
         
         return BookingDetailSerializer
@@ -125,7 +125,11 @@ class BookingViewSet(viewsets.ModelViewSet):
                     pitch_id=pitch_id,
                     club_id=club_id,
                     date=date,
-                    status__in=BOOKING_STATUS_DENIED + [BookingStatus.PENDING_MANAGER.value, BookingStatus.CANCELED.value, BookingStatus.NO_SHOW.value]
+                    status__in=BOOKING_STATUS_DENIED + [BookingStatus.PENDING_MANAGER.value, 
+                                                        BookingStatus.CANCELED.value, 
+                                                        BookingStatus.NO_SHOW.value,
+                                                        BookingStatus.EXPIRED.value
+                                                        ]
 
                 ).select_related('player').order_by('start_time')
         
@@ -141,7 +145,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     
 
     @action(detail=False, methods=['get'], url_path='by-day-time-pitch-char')
-    def by_day_time_pitch(self, request):
+    def by_day_time_pitch_char(self, request):
         """
         GET: List all bookings for a specific day, time and pitch
         """
@@ -184,15 +188,9 @@ class BookingViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
 
 
-        try:
-            booking = BookingService.owner_update_booking_status(pk, serializer.validated_data['status'], self.request.auth.get('club_id'))
-            return Response({"status": f"تم تغيير حالة الحجز الى {BookingStatus(serializer.validated_data['status']).label}"})
-        except ValueError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-    
+        booking = BookingService.owner_update_booking_status(pk, serializer.validated_data['status'], self.request.auth.get('club_id'))
+        return Response({"status": f"تم تغيير حالة الحجز الى {BookingStatus(serializer.validated_data['status']).label}"})
+
     
     @action(detail=False, methods=['get'], url_path='show-convert-booking-status')
     def show_convert_booking_status(self, request, pk=None):

@@ -11,7 +11,7 @@ from management.models import Feature
 from .serializers import BookingDetailSerializer, UserBookingSerializer, BookingPriceRequestForUserSerializer, EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer
 from core.services.CouponService import CouponService
 from .helper import haversine_distance
-from .serializers import BookingPriceRequestForUserSerializer, CouponSerializer,ReviewCreateSerializer, ReviewListSerializer,  EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer, PitchSearchResultSerializer, PitchSearchSerializer
+from .serializers import PendingActionSerializer, BookingPriceRequestForUserSerializer, CouponSerializer,ReviewCreateSerializer, ReviewListSerializer,  EquipmentAvailabilityQueryForUserSerializer, ClubListSerializer, ClubIDFilterSerializer, BookingCreateForUserSerializer, ConsolidatedBookingQuerySerializer, PitchSearchResultSerializer, PitchSearchSerializer
 from player_booking.services.ClubTimeService import ClubTimeService
 from rest_framework.generics import get_object_or_404
 from rest_framework.views import APIView
@@ -22,7 +22,7 @@ from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from .services.BookingHistoryService import UserBookingService 
 from .services.PitchSearchService import PitchSearchService
-from .pagination import PitchSearchPagination
+from .pagination import ClubPagination, PitchSearchPagination
 
 from rest_framework.utils.urls import replace_query_param
 
@@ -33,6 +33,39 @@ from rest_framework.exceptions import ValidationError
 from player_booking.models import BookingStatus
 from .services.booking_detail_service import UserBookingDetailService
 from .pagination import MyBookingPagination
+from .services.pending_action_service import PendingActionService
+
+from dashboard_booking.services.BookingService import BookingService
+
+
+class PlayerConvertBookingAPIView(generics.GenericAPIView):
+
+    def patch(self, request, pk):
+
+        BookingService.owner_update_booking_status(
+            booking_id=pk,
+            status=5,
+            club_id=None,
+            user_id=request.user.id
+        )
+
+        return Response(
+            {
+                "status": (
+                    f"تم تغيير حالة الحجز الى "
+                    f"{BookingStatus.CANCELED.label}"
+                )
+            },
+            status=status.HTTP_200_OK
+        )
+
+class PendingActionListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class   = PendingActionSerializer
+
+    def get_queryset(self):
+        return PendingActionService.get_pending_actions(self.request.user)
+    
 
 class UserBookingDetailView(generics.RetrieveAPIView):
     serializer_class   = BookingDetailSerializer
@@ -135,15 +168,11 @@ class StatusKeysForUserBookingListAPIView(APIView):
         })
 
 class ActiveClubListAPIView(generics.ListAPIView):
-    """
-    List all active clubs with their basic info and tags.
-    """
-
     serializer_class = ClubListSerializer
+    pagination_class = ClubPagination
 
     def get_queryset(self):
-        # Only active clubs
-        return (
+        queryset = (
             Club.objects.filter(is_active=True)
             .prefetch_related(
                 Prefetch(
@@ -167,8 +196,19 @@ class ActiveClubListAPIView(generics.ListAPIView):
                 "rating_avg",
                 "rating_count",
                 "flexible_reservation",
+                "governorate",
             )
         )
+
+        governorate = self.request.query_params.get("governorate")
+        if governorate is not None:
+            try:
+                queryset = queryset.filter(governorate=int(governorate))
+            except ValueError:
+                raise ValidationError({"governorate": "يجب أن تكون قيمة رقمية صحيحة."})
+
+        return queryset
+    
 
 @api_view(['GET'])
 def ClubOpeningPrices(request):
@@ -306,6 +346,7 @@ class PitchSearchView(APIView):
             pitch_type=data.get('type'),
             size_high=data.get('size_high'),
             size_width=data.get('size_width'),
+            governorate=data.get('governorate'),
         )
 
         paginator = PitchSearchPagination()

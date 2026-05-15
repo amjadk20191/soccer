@@ -40,6 +40,8 @@ class PitchSearchService:
         pitch_type=None,
         size_high=None,
         size_width=None,
+        governorate=None,
+
     ) -> tuple:
         weekday_idx = cls._custom_weekday(date)
 
@@ -53,6 +55,7 @@ class PitchSearchService:
             pitch_type,
             size_high,
             size_width,
+            governorate
         )
 
         qs, effective_hours_map = cls._apply_effective_hours_filter(  # ← unpack here
@@ -128,6 +131,7 @@ class PitchSearchService:
         pitch_type,
         size_high,
         size_width,
+        governorate=None,          
     ):
         open_club_ids = cls._get_open_club_ids(weekday_idx, date_exception_club_ids)
 
@@ -137,7 +141,7 @@ class PitchSearchService:
                 is_active=True,
                 is_deteted=False,
                 club__is_active=True,
-                club_id__in=open_club_ids,   # ← simple IN lookup, works everywhere
+                club_id__in=open_club_ids,
             )
             .exclude(id__in=booked_pitch_ids)
             .select_related('club')
@@ -149,6 +153,8 @@ class PitchSearchService:
             qs = qs.filter(size_high=size_high)
         if size_width is not None:
             qs = qs.filter(size_width=size_width)
+        if governorate is not None:
+            qs = qs.filter(club__governorate=governorate)   # ← add
 
         return qs
     # ── Private: effective hours (bulk fetch → Python resolution) ───────────

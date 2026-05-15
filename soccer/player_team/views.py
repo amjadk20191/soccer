@@ -136,7 +136,8 @@ class TeamDetailsView(APIView):
                 'clean_sheet',
                 'failed_to_score',
                 'challenge_mode',
-                'created_at'
+                'created_at',
+                'governorate'
             ).prefetch_related(
                 Prefetch(
                     'teammember_set',
@@ -323,6 +324,7 @@ class SearchUsersView(APIView):
             team_id,
             username_filter,
             request,
+            governorate=serializer.validated_data.get('governorate', None),
             limit=10
         )
         
@@ -444,7 +446,9 @@ class CreateTeamView(APIView):
             name=serializer.validated_data['name'],
             logo=serializer.validated_data.get('logo'),
             time=serializer.validated_data.get('time'),
-            address=serializer.validated_data.get('address')
+            address=serializer.validated_data.get('address'),
+            governorate=serializer.validated_data['governorate'], 
+
         )
         
         # Serialize response

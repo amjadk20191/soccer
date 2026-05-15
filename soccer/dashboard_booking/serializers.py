@@ -219,7 +219,7 @@ class BookingListPitchSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'date', 'start_time', 'end_time', 'price', 'deposit', 'status_display', 'is_challenge',
-            'player_name', 'full_name', 'phone', 'by_owner'
+            'player_name', 'full_name', 'phone', 'by_owner', 'is_challenge',
         ]
 
 class BookingCreateSerializer(serializers.ModelSerializer):

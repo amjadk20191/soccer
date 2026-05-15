@@ -43,7 +43,7 @@ class EquipmentBookingService:
             for item in equipments
         }
 
-        club_equipments = ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=club_id, is_active=True, id__in=equipment_ids, is_deteted=False)
+        club_equipments = list(ClubEquipment.objects.select_for_update().values('id', 'quantity', 'price', 'equipment_id').filter(club_id=club_id, is_active=True, id__in=equipment_ids, is_deteted=False))
         print(club_equipments)
         print(":::::::::::::::::::::::::::::::::")
         print(equipment_ids)
@@ -88,7 +88,7 @@ class EquipmentBookingService:
             for item in equipments
         }
 
-        club_equipments = ClubEquipment.objects.values('id', 'quantity', 'price').filter(club_id=club_id, is_active=True, id__in = equipment_ids, is_deteted=False)
+        club_equipments = list(ClubEquipment.objects.values('id', 'quantity', 'price').filter(club_id=club_id, is_active=True, id__in = equipment_ids, is_deteted=False))
         if len(club_equipments) != len(equipment_ids):  
             raise ValidationError({"error": "العدة يجب أن تكون نشطة."})
         start_dt = datetime.combine(date.today(), start_time)

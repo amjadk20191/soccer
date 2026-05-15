@@ -74,7 +74,7 @@ class TeamDetailService:
                 'total_wins', 'total_losses', 'total_draw',
                 'total_canceled', 'goals_scored', 'goals_conceded',
                 'clean_sheet', 'failed_to_score',
-                'logo__logo',
+                'logo__logo', 'governorate'
             )
             .first()
         )

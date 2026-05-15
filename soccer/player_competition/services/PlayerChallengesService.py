@@ -14,22 +14,29 @@ def _is_upcoming(time, date):
 
 PLAYER_RESULT_FILTERS = {
     'فوز': lambda time, date: (
-        _is_played(time, date) & (
+        _is_played(time, date) &
+        Q(challenge__score_finalized=True) & (
             Q(team_id=F('challenge__team_id'),            challenge__result_team__gt=F('challenge__result_challenged_team')) |
             Q(team_id=F('challenge__challenged_team_id'), challenge__result_challenged_team__gt=F('challenge__result_team'))
         )
     ),
     'خسارة': lambda time, date: (
-        _is_played(time, date) & (
+        _is_played(time, date) &
+        Q(challenge__score_finalized=True) & (
             Q(team_id=F('challenge__team_id'),            challenge__result_team__lt=F('challenge__result_challenged_team')) |
             Q(team_id=F('challenge__challenged_team_id'), challenge__result_challenged_team__lt=F('challenge__result_team'))
         )
     ),
     'تعادل': lambda time, date: (
         _is_played(time, date) &
+        Q(challenge__score_finalized=True) &
         Q(challenge__result_team=F('challenge__result_challenged_team'))
     ),
-    'قريباً': lambda time, date: _is_upcoming(time, date),
+    'قريباً': lambda time, date: _is_upcoming(time, date) & Q(challenge__score_finalized=False),
+    'لم_يتم_التصويت': lambda time, date: (
+            _is_played(time, date) &
+            Q(challenge__score_finalized=False) 
+        ),
 }
 
 
@@ -53,6 +60,7 @@ class PlayerChallengesService:
                 'challenge__id',
                 'challenge__date', 'challenge__start_time', 'challenge__end_time',
                 'challenge__status',
+                'challenge__score_finalized',
                 'challenge__result_team', 'challenge__result_challenged_team',
                 'challenge__team_id', 'challenge__team__name', 'challenge__team__logo__logo',
                 'challenge__challenged_team_id', 'challenge__challenged_team__name',

@@ -125,7 +125,12 @@ class NotificationService:
                 "message": {
                     "token": token,
                     "notification": {"title": title, "body": body},
-                    "data": {k: str(v) for k, v in (data or {}).items()},
+                    # "data": {k: str(v) for k, v in (data or {}).items()},
+                    "data": {
+                        "notification_type": notification_type,
+                        **( {"helper_id": str(helper_id)} if helper_id else {} ),
+                        **{k: str(v) for k, v in (data or {}).items()},
+                    },
                 }
             }
             try:
@@ -142,6 +147,7 @@ class NotificationService:
                     response = httpx.post(cls.FCM_URL, json=payload, headers=headers, timeout=10)
 
                 response.raise_for_status()
+                print(response.status_code)
                 print(f'[FCM] notification sent to {user} ✅')
 
             except Exception as e:

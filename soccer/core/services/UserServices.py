@@ -39,11 +39,11 @@ class UserService:
             if user.image_updated_at:
                 interval_days = getattr(settings, 'IMAGE_UPDATE_INTERVAL_DAYS', 30)  # fallback to 30 if not set
                 next_allowed = user.image_updated_at + timedelta(days=interval_days)
-                if timezone.now() < next_allowed:
-                    days_left = (next_allowed - timezone.now()).days + 1
-                    raise serializers.ValidationError({
-                        'image': f'لا يمكنك تغيير الصورة إلا بعد {days_left} يوم.'
-                    })
+                # if timezone.now() < next_allowed:
+                #     days_left = (next_allowed - timezone.now()).days + 1
+                #     raise serializers.ValidationError({
+                #         'image': f'لا يمكنك تغيير الصورة إلا بعد {days_left} يوم.'
+                #     })
 
             # Delete old image if not default
             if user.image and str(user.image) != DEFAULT_USER_IMAGE:

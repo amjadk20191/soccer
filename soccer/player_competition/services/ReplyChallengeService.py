@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework.exceptions import PermissionDenied, NotFound, ValidationError
 from dashboard_booking.services.PricingService import PricingService
 from player_competition.services.CreateChallengeService import CreateChallengeService
+from core.services.notification_service import NotificationService
 
 from ..models import Challenge, ChallengeStatus
 from player_booking.models import Booking, BookingStatus, PayStatus
@@ -34,7 +35,11 @@ class ReplyChallengeService:
         # permission check; no separate round-trip needed.
         challenge = (
             Challenge.objects
-            .select_related("pitch")           # needed for Booking price on accept
+            .select_related("pitch",
+                    "team__captain",
+                    "challenged_team",
+
+                )
             .filter(
                 id=challenge_id,
                 status=ChallengeStatus.PENDING_TEAM,
@@ -65,6 +70,17 @@ class ReplyChallengeService:
             status=ChallengeStatus.REJECTED,
         )
         challenge.status = ChallengeStatus.REJECTED   # keep in-memory object consistent
+        
+        NotificationService.send_notification(
+            user=challenge.team.captain,
+            title="تم رفض التحدي",
+            body=f"""
+تم رفض التحدي من قبل: {challenge.challenged_team.name}
+            """,
+            notification_type='create_challenge',
+            helper_id=challenge.id,
+        )
+   
         return challenge
 
     @staticmethod
@@ -180,5 +196,13 @@ class ReplyChallengeService:
             # Challenge.objects.filter(id=challenge.id).update(booking_id=booking.id)
             challenge.booking_id = booking.id
 
-
+        NotificationService.send_notification(
+            user=challenge.team.captain,
+            title="تم قبول التحدي",
+            body=f"""
+تم قبول التحدي من قبل: {challenge.challenged_team.name}
+            """,
+            notification_type='create_challenge',
+            helper_id=challenge.id,
+        )
         return challenge

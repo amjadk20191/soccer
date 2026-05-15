@@ -6,6 +6,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError 
 import uuid
+
+from .governorates import SyrianGovernorate
 from .utils import user_image_upload_path,DEFAULT_USER_IMAGE
 
 
@@ -92,11 +94,20 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # Booking Information
     booking_time = models.PositiveIntegerField(default=0, verbose_name=_('Booking Time'))
-    challenge_time = models.PositiveIntegerField(default=0, verbose_name=_('Booking Time'))
     cancel_time = models.PositiveIntegerField(default=0, verbose_name=_('Cancel Time'))
     no_show_time = models.PositiveIntegerField(default=0, verbose_name=_('No show Time'))
     disputed_time = models.PositiveIntegerField(default=0, verbose_name=_('Disputed Time'))
+    expired_time = models.PositiveIntegerField(default=0)
+
+    challenge_time = models.PositiveIntegerField(default=0, verbose_name=_('Booking Time'))
+
+    # statistics challenge
     challenge_wins = models.PositiveBigIntegerField(default=0)
+    challenge_losses = models.PositiveBigIntegerField(default=0)
+    challenge_draw = models.PositiveBigIntegerField(default=0)
+    
+    
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Updated At'))
@@ -104,6 +115,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Django Required Fields
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+
+    governorate = models.PositiveSmallIntegerField(choices=SyrianGovernorate.choices)
+
     
     # Manager
     objects = CustomUserManager()
@@ -148,7 +162,7 @@ class AppVersion(models.Model):
     release_notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
+    is_maintenance = models.BooleanField(default=False) 
     class Meta:
         ordering = ["-created_at"]
         unique_together = ["app_type", "platform", "version"]

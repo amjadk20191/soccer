@@ -36,13 +36,15 @@ class CheckAvailabilityInputSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     age = serializers.IntegerField(read_only=True)
     # foot_preference = serializers.CharField(source='get_foot_preference_display', read_only=True)
+    governorate = serializers.CharField(source='get_governorate_display')
+
 
     class Meta:
         model = User
         fields = [
             'id', 'full_name', 'username', 'phone',
             'birthday', 'age', 'height', 'weight', 'foot_preference','image',
-            'booking_time', 'cancel_time', 'challenge_time', 'no_show_time', 'disputed_time'
+            'booking_time', 'cancel_time', 'challenge_time', 'no_show_time', 'disputed_time', 'governorate'
         ]
 
 class NoteSerializer(serializers.ModelSerializer):
@@ -77,7 +79,7 @@ class UpdateUserSerializer(serializers.ModelSerializer):
         fields = [
             'full_name', 'phone', 'username',
             'height', 'weight', 'foot_preference', 'birthday',
-            'password','image', 
+            'password','image', 'governorate'
         ]
         extra_kwargs = {
             'image': {
@@ -118,7 +120,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'phone', 'password', 'full_name', 'username','image'  ,
-            'birthday', 'height', 'weight', 'foot_preference'
+            'birthday', 'height', 'weight', 'foot_preference', 'governorate'
         ]
         extra_kwargs = {
             'phone': {

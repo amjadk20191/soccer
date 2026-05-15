@@ -81,8 +81,8 @@ class UserDeviceAdmin(admin.ModelAdmin):
 
 @admin.register(AppVersion)
 class AppVersionAdmin(admin.ModelAdmin):
-    list_display = ["app_type", "platform", "version", "build_number", "is_required", "is_active"]
-    list_filter = ["app_type", "platform", "is_required", "is_active"]
+    list_display = ["app_type", "platform", "version", "build_number", "is_required", "is_active", "is_maintenance"]
+    list_filter = ["app_type", "platform", "is_required", "is_active", "is_maintenance"]
     search_fields = ["version"]
 
 @admin.register(Notification)

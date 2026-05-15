@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from collections import Counter
+from django.db import transaction
 
 import datetime
 from django.utils import timezone as tz
@@ -35,13 +36,17 @@ def _resolve_result(
     is_our_team_first: bool,
     date: datetime.date,
     end_time: datetime.time,
+    score_finalized,
+
 ) -> str | None:
 
     # Check if the challenge hasn't finished yet
     end_naive = datetime.datetime.combine(date, end_time)
     end_dt = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
-    if end_dt > tz.now():
+    if (not score_finalized)  and end_dt > tz.now():
         return 'قريباً'
+    if (not score_finalized) and (not end_dt > tz.now()):
+        return 'لم_يتم_التصويت'
 
     our_score, their_score = (
         (result_team, result_challenged_team) if is_our_team_first
@@ -81,6 +86,8 @@ class TeamChallengeSerializer(serializers.ModelSerializer):
             is_our_team_first      = str(obj.team_id) == self._team_id(),
             date                   = obj.date,
             end_time               = obj.end_time,
+            score_finalized        = obj.score_finalized,
+
         )
 
 class PlayerChallengeListSerializer(serializers.Serializer):
@@ -117,6 +124,7 @@ class PlayerChallengeListSerializer(serializers.Serializer):
             is_our_team_first      = obj.team_id == obj.challenge.team_id,
             date                   = obj.challenge.date,
             end_time               = obj.challenge.end_time,
+            score_finalized        = obj.challenge.score_finalized,
         )
 
 class PitchSerializer(serializers.Serializer):
@@ -262,10 +270,12 @@ class ChallengeHistorySerializer(serializers.Serializer):
 
     def get_challenge_status(self, obj):
         end_naive = datetime.datetime.combine(obj.date, obj.end_time)
-        end_dt    = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
-
-        if end_dt > tz.now():
+        end_dt = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
+      
+        if not obj.score_finalized:
             return 'قريباً'
+        if (not obj.score_finalized) and (not end_dt > tz.now()):
+            return 'لم_يتم_التصويت'
 
         my_score  = self.get_my_score(obj)
         opp_score = self.get_opponent_score(obj)
@@ -298,6 +308,8 @@ class TeamDetailSerializer(TeamLogoMixin, serializers.ModelSerializer):
     active_players = serializers.SerializerMethodField()
     challenges     = serializers.SerializerMethodField()
     total_players  = serializers.SerializerMethodField()
+    governorate    = serializers.CharField(source='get_governorate_display')
+
 
     class Meta:
         model  = Team
@@ -311,6 +323,7 @@ class TeamDetailSerializer(TeamLogoMixin, serializers.ModelSerializer):
             'statistics',
             'active_players',
             'challenges',
+            'governorate'
         ]
 
     def get_statistics(self, obj):
@@ -378,13 +391,12 @@ class PlayerChallengeSerializer(serializers.Serializer):
 
     def get_challenge_status(self, obj):
         challenge = obj.challenge
-
-        # Build a timezone-aware end datetime from date + end_time
         end_naive = datetime.datetime.combine(challenge.date, challenge.end_time)
-        end_dt    = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
-
-        if end_dt > tz.now():
+        end_dt = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
+        if not challenge.score_finalized:
             return 'قريباً'
+        if (not challenge.score_finalized) and (not end_dt > tz.now()):
+            return 'لم_يتم_التصويت'
 
         # Resolve scores from the player's perspective
         if obj.team_id == challenge.team_id:
@@ -440,17 +452,20 @@ class ScoreSubmissionSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         challenge = validated_data['challenge']
         player    = self.context['request'].user
+        
+        with transaction.atomic():
+            # save submission
+            submission = ScoreSubmission.objects.create(
+                challenge=challenge,
+                player=player,
+                result_team=validated_data['result_team'],
+                result_challenged_team=validated_data['result_challenged_team'],
+            )
 
-        # save submission
-        submission = ScoreSubmission.objects.create(
-            challenge=challenge,
-            player=player,
-            result_team=validated_data['result_team'],
-            result_challenged_team=validated_data['result_challenged_team'],
-        )
+            ChallengePlayerBooking.objects.filter(challenge=challenge, player=player).update(score_done=True)
 
-        # check if we can decide the final score
-        self._try_finalize_score(challenge)
+            # check if we can decide the final score
+            self._try_finalize_score(challenge)
 
         return submission
 
@@ -503,8 +518,10 @@ class PlayerProfileSerializer(serializers.ModelSerializer):
     image          = serializers.SerializerMethodField()
     challenges     = serializers.SerializerMethodField()
     negative_time  = serializers.SerializerMethodField()
-    in_team        = serializers.SerializerMethodField()   # ← new
-    request_id     = serializers.SerializerMethodField()   # ← new
+    in_team        = serializers.SerializerMethodField()   
+    request_id     = serializers.SerializerMethodField()
+    governorate = serializers.CharField(source='get_governorate_display')
+   
 
     class Meta:
         model  = User
@@ -513,16 +530,20 @@ class PlayerProfileSerializer(serializers.ModelSerializer):
             'age', 'height', 'weight', 'foot_preference',
             'booking_time', 'challenge_time',
             'negative_time',
+            'challenge_wins', 'challenge_losses', 'challenge_draw',
+
             'in_team',      # null when team_id not supplied
             'request_id',   # null when team_id not supplied or no pending invite
             'challenges',
+            'governorate'
         ]
 
     def get_negative_time(self, obj):
         return (
             getattr(obj, 'cancel_time',   0) +
             getattr(obj, 'no_show_time',  0) +
-            getattr(obj, 'disputed_time', 0)
+            getattr(obj, 'disputed_time', 0) +
+            getattr(obj, 'expired_time', 0)
         )
 
     def get_image(self, obj):
@@ -635,6 +656,8 @@ class ShowChallengeTeamsSerializer(serializers.ModelSerializer):
     active_member_count = serializers.IntegerField(read_only=True)
     team_age_days   = serializers.SerializerMethodField()
     logo_url        = serializers.SerializerMethodField()
+    governorate = serializers.CharField(source='get_governorate_display')
+
 
     class Meta:
         model  = Team
@@ -642,7 +665,7 @@ class ShowChallengeTeamsSerializer(serializers.ModelSerializer):
             'id', 'name',
             'goals_scored', 'total_wins', 'total_losses',
             'avg_player_age', 'active_member_count',
-            'team_age_days', 'logo_url',
+            'team_age_days', 'logo_url', 'governorate'
         ]
 
     def get_team_age_days(self, obj) -> int:
@@ -667,6 +690,8 @@ class TeamBriefSerializer(serializers.Serializer):
     goals_scored   = serializers.IntegerField()
     clean_sheet    = serializers.IntegerField()
     logo           = serializers.SerializerMethodField()
+    governorate = serializers.CharField(source='get_governorate_display')
+
 
     def get_logo(self, obj) -> str | None:
         request = self.context.get("request")

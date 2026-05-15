@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Count, Q
+from core.services.notification_service import NotificationService
 from soccer.enm import BOOKING_STATUS_DENIED
 from django.conf import settings
 
@@ -77,6 +78,7 @@ class CreateChallengeService:
                 challenge_mode=True,
                 is_active=True,
             )
+            .select_related('captain')
             .annotate(
                 active_member_count=Count(
                     "teammember",
@@ -88,6 +90,7 @@ class CreateChallengeService:
 
         team            = CreateChallengeService._resolve_team(teams, team_id,            "فريقك")
         challenged_team = CreateChallengeService._resolve_team(teams, challenged_team_id, "قريق الخصم")
+
 
         # Captain guard — no DB hit, uses the already-fetched captain_id
         if team.captain_id != requesting_user_id:
@@ -166,7 +169,19 @@ class CreateChallengeService:
             date=date,
             deposit_percent=deposit_percent
         )
-
+        
+        NotificationService.send_notification(
+            user=challenged_team.captain,
+            title="تم طلب تحدي جديد",
+            body=f"""
+تم طلب تحدي جديد في {date}
+من الساعة {start_time} الى {end_time}
+من فريق: {team.name}
+            """,
+            notification_type='create_challenge',
+            helper_id=challenge.id,
+        )
+   
         return challenge
 
 

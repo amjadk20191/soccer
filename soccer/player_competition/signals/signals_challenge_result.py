@@ -1,5 +1,6 @@
 # player_competition/signals/signals_challenge_result.py
 
+from django.db import models
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 from player_competition.models import Challenge, ChallengePlayerBooking
@@ -17,13 +18,12 @@ def update_team_stats_on_result(sender, instance, **kwargs):
 
     # only fire when result actually changed
     if old.result_team == instance.result_team and old.result_challenged_team == instance.result_challenged_team:
-            if old.score_finalized == instance.score_finalized:
-                return  # nothing changed at all, skip
-
-
-
+        if old.score_finalized == instance.score_finalized:
+            return  # nothing changed at all, skip
 
     from player_team.models import Team
+    from core.models import User
+
     team            = Team.objects.get(pk=instance.team_id)
     challenged_team = Team.objects.get(pk=instance.challenged_team_id)
 
@@ -71,18 +71,40 @@ def update_team_stats_on_result(sender, instance, **kwargs):
         if old_score_challenged == 0:
             challenged_team.failed_to_score -= 1
 
-        # undo player challenge_wins
+        # undo player stats
         if old_winning_team_id:
-            old_winning_players = ChallengePlayerBooking.objects.filter(
+            old_losing_team_id = (
+                challenged_team.id if old_winning_team_id == team.id else team.id
+            )
+
+            old_winning_player_ids = ChallengePlayerBooking.objects.filter(
                 challenge=instance,
                 team_id=old_winning_team_id,
-            ).select_related('player')
+            ).values_list('player_id', flat=True)
 
-            for cp in old_winning_players:
-                player = cp.player
-                player.challenge_wins = max(0, player.challenge_wins - 1)
-                player.save(update_fields=['challenge_wins'])
-                print(f'[player_stats] {player} challenge_wins-1 ✅')
+            old_losing_player_ids = ChallengePlayerBooking.objects.filter(
+                challenge=instance,
+                team_id=old_losing_team_id,
+            ).values_list('player_id', flat=True)
+
+            User.objects.filter(id__in=old_winning_player_ids).update(
+                challenge_wins=models.F('challenge_wins') - 1
+            )
+            User.objects.filter(id__in=old_losing_player_ids).update(
+                challenge_losses=models.F('challenge_losses') - 1
+            )
+            print(f'[player_stats] undid wins/losses for challenge {instance.id}')
+
+        else:
+            # old was a draw — undo draw for all players
+            all_old_player_ids = ChallengePlayerBooking.objects.filter(
+                challenge=instance,
+            ).values_list('player_id', flat=True)
+
+            User.objects.filter(id__in=all_old_player_ids).update(
+                challenge_draw=models.F('challenge_draw') - 1
+            )
+            print(f'[player_stats] undid draws for challenge {instance.id}')
 
     # ── ADD new stats ─────────────────────────────────────────
     score_team       = instance.result_team
@@ -142,17 +164,39 @@ def update_team_stats_on_result(sender, instance, **kwargs):
     print(f'[team_stats] team:      wins={team.total_wins} losses={team.total_losses} goals={team.goals_scored}-{team.goals_conceded}')
     print(f'[team_stats] challenged: wins={challenged_team.total_wins} losses={challenged_team.total_losses} goals={challenged_team.goals_scored}-{challenged_team.goals_conceded}')
 
-    # ── Update challenge_wins for new winning team players ────
+    # ── Update player stats for new result ───────────────────
     if winning_team_id:
-        winning_players = ChallengePlayerBooking.objects.filter(
+        losing_team_id = (
+            challenged_team.id if winning_team_id == team.id else team.id
+        )
+
+        winning_player_ids = ChallengePlayerBooking.objects.filter(
             challenge=instance,
             team_id=winning_team_id,
-        ).select_related('player')
+        ).values_list('player_id', flat=True)
 
-        for cp in winning_players:
-            player = cp.player
-            player.challenge_wins += 1
-            player.save(update_fields=['challenge_wins'])
-            print(f'[player_stats] {player} challenge_wins+1 ✅')
+        losing_player_ids = ChallengePlayerBooking.objects.filter(
+            challenge=instance,
+            team_id=losing_team_id,
+        ).values_list('player_id', flat=True)
+
+        User.objects.filter(id__in=winning_player_ids).update(
+            challenge_wins=models.F('challenge_wins') + 1
+        )
+        User.objects.filter(id__in=losing_player_ids).update(
+            challenge_losses=models.F('challenge_losses') + 1
+        )
+        print(f'[player_stats] updated wins/losses for challenge {instance.id} ✅')
+
+    else:
+        # draw — update all players in the challenge
+        all_player_ids = ChallengePlayerBooking.objects.filter(
+            challenge=instance,
+        ).values_list('player_id', flat=True)
+
+        User.objects.filter(id__in=all_player_ids).update(
+            challenge_draw=models.F('challenge_draw') + 1
+        )
+        print(f'[player_stats] updated draws for challenge {instance.id} ✅')
 
     print(f'[team_stats] updated stats for challenge {instance.id} ✅')

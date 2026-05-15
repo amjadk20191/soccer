@@ -53,7 +53,8 @@ class BookingNotification(models.Model):
         (2, _('accept')),
         (3, _('reject'))
         ], default=1)
-    
+    created_at = models.DateTimeField(auto_now_add=True)
+
     
     class Meta:
         db_table = 'booking_notifications'

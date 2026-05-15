@@ -112,6 +112,7 @@ class Booking(models.Model):
     is_challenge = models.BooleanField(default=False)
     owner_reminded = models.BooleanField(default=False)
     rate_notified   = models.BooleanField(default=False)
+    rate_done   = models.BooleanField(default=False)
     pay_reminded    = models.BooleanField(default=False)
     coupon = models.ForeignKey(
         'Coupon',
@@ -133,6 +134,15 @@ class Booking(models.Model):
             models.Index(fields=['pitch', 'date','start_time']),
             models.Index(fields=['player']),
             models.Index(fields=['status']),
+            models.Index(
+                fields=['player', 'created_at', 'status'],
+                name='booking_player_created'
+            ),
+            models.Index(
+                fields=['is_challenge', 'status', 'created_at'],
+                name='booking_challenge_pending',
+                condition=models.Q(is_challenge=True)   # partial index
+            ),
         ]
 
 

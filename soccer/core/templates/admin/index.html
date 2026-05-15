@@ -1,0 +1,391 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:       #0b0d12;
+    --surface:  #11141c;
+    --surface2: #181c27;
+    --border:   #1e2435;
+    --g:        #4ade80;
+    --b:        #60a5fa;
+    --p:        #f472b6;
+    --o:        #fb923c;
+    --y:        #facc15;
+    --r:        #f87171;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --radius:   12px;
+  }
+
+  body, #container        { background: var(--bg)      !important; color: var(--text) !important; font-family: 'DM Mono', monospace !important; }
+  #header                 { background: var(--surface)  !important; border-bottom: 1px solid var(--border) !important; box-shadow: none !important; }
+  #branding h1 a          { color: var(--g) !important; font-family: 'Syne', sans-serif !important; font-weight: 800 !important; letter-spacing: -1px; }
+  #nav-sidebar            { background: var(--surface)  !important; border-right: 1px solid var(--border) !important; }
+  #content, #content-main { background: var(--bg)       !important; }
+  .breadcrumbs            { background: var(--surface)  !important; border-bottom: 1px solid var(--border) !important; color: var(--muted) !important; }
+  a                       { color: var(--b) !important; }
+  a:hover                 { color: var(--g) !important; }
+  #nav-sidebar a          { color: var(--text) !important; font-size: 12px !important; }
+  #nav-sidebar a:hover    { color: var(--g)    !important; }
+  .sidebar-sticky         { padding-top: 8px !important; }
+
+  /* ── section label ── */
+  .dash-label {
+    font-size: 10px;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin: 24px 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dash-label::after { content:''; flex:1; height:1px; background: var(--border); }
+
+  /* ── KPI grid ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+  @media(max-width:1100px){ .kpi-grid{ grid-template-columns: repeat(3,1fr); } }
+  @media(max-width:700px) { .kpi-grid{ grid-template-columns: repeat(2,1fr); } }
+
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--c);
+    border-radius: var(--radius);
+    padding: 16px 16px 14px;
+    position: relative;
+    transition: transform .18s ease, box-shadow .18s ease;
+    animation: up .4s ease both;
+    cursor: default;
+  }
+  .kpi:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+  .kpi-icon  { font-size: 18px; position: absolute; top: 14px; right: 14px; opacity:.4; }
+  .kpi-label { font-size: 10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .kpi-value { font-family:'Syne',sans-serif; font-size:36px; font-weight:800; color:var(--c); line-height:1; letter-spacing:-2px; }
+  .kpi-sub   { font-size:10px; color:var(--muted); margin-top:4px; }
+
+  .kpi:nth-child(1){--c:var(--g);  animation-delay:.04s}
+  .kpi:nth-child(2){--c:var(--b);  animation-delay:.08s}
+  .kpi:nth-child(3){--c:var(--p);  animation-delay:.12s}
+  .kpi:nth-child(4){--c:var(--o);  animation-delay:.16s}
+  .kpi:nth-child(5){--c:var(--y);  animation-delay:.20s}
+  .kpi:nth-child(6){--c:var(--b);  animation-delay:.24s}
+
+  /* ── status breakdown bar ── */
+  .status-row {
+    display: grid;
+    grid-template-columns: repeat(5,1fr);
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .st-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display:flex; align-items:center; gap:10px;
+    animation: up .4s ease both;
+  }
+  .st-chip:nth-child(1){animation-delay:.10s}
+  .st-chip:nth-child(2){animation-delay:.14s}
+  .st-chip:nth-child(3){animation-delay:.18s}
+  .st-chip:nth-child(4){animation-delay:.22s}
+  .st-chip:nth-child(5){animation-delay:.26s}
+  .st-dot  { width:10px;height:10px;border-radius:50%;flex-shrink:0; }
+  .st-info { display:flex;flex-direction:column;gap:2px; }
+  .st-num  { font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1; }
+  .st-lbl  { font-size:10px;color:var(--muted);letter-spacing:.08em; }
+
+  /* ── two-col layout ── */
+  .two-col { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; }
+  @media(max-width:900px){ .two-col{ grid-template-columns:1fr; } }
+
+  /* ── panels ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .panel-head {
+    padding: 12px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-body { padding: 0; }
+
+  /* ── table ── */
+  .dt { width:100%; border-collapse:collapse; font-size:12px; }
+  .dt th { padding:9px 14px; color:var(--muted); font-size:10px; letter-spacing:.1em; text-transform:uppercase; border-bottom:1px solid var(--border); background:var(--surface2); font-weight:400; text-align:left; }
+  .dt td { padding:10px 14px; border-bottom:1px solid rgba(255,255,255,.03); }
+  .dt tr:last-child td { border-bottom:none; }
+  .dt tr:hover td { background:rgba(255,255,255,.02); }
+
+  /* ── badges ── */
+  .badge {
+    display:inline-block; padding:2px 9px; border-radius:4px;
+    font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  }
+  .bg { background:rgba(74,222,128,.12);  color:#4ade80; }
+  .bb { background:rgba(96,165,250,.12);  color:#60a5fa; }
+  .bo { background:rgba(251,146,60,.12);  color:#fb923c; }
+  .br { background:rgba(248,113,113,.12); color:#f87171; }
+  .by { background:rgba(250,204,21,.12);  color:#facc15; }
+  .bm { background:rgba(100,116,139,.12); color:#94a3b8; }
+
+  /* ── quick actions ── */
+  .qa-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; padding:12px; }
+  .qa-btn {
+    display:flex; align-items:center; gap:8px;
+    padding:10px 12px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text) !important;
+    font-size:11px;
+    text-decoration:none !important;
+    transition: border-color .15s, background .15s;
+  }
+  .qa-btn:hover { border-color:var(--g); background:rgba(74,222,128,.06); color:var(--g) !important; }
+  .qa-icon { font-size:14px; }
+
+  /* ── activity feed ── */
+  .feed-item {
+    display:flex; align-items:flex-start; gap:10px;
+    padding:10px 14px;
+    border-bottom:1px solid rgba(255,255,255,.03);
+    font-size:11px;
+  }
+  .feed-item:last-child { border-bottom:none; }
+  .feed-dot { width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0; }
+  .feed-text { color:var(--text); line-height:1.5; }
+  .feed-time { color:var(--muted); font-size:10px; margin-top:2px; }
+
+  /* ── empty state ── */
+  .empty { padding:28px 16px; text-align:center; color:var(--muted); font-size:12px; }
+
+  @keyframes up {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  <!-- ── KPI Cards ─────────────────────────────────── -->
+  <div class="dash-label">📊 Platform Overview</div>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <span class="kpi-icon">👥</span>
+      <div class="kpi-label">Total Users</div>
+      <div class="kpi-value">{{ total_users }}</div>
+      <div class="kpi-sub">all accounts</div>
+    </div>
+    <div class="kpi">
+      <span class="kpi-icon">🆕</span>
+      <div class="kpi-label">New Today</div>
+      <div class="kpi-value">{{ users_today }}</div>
+      <div class="kpi-sub">registered today</div>
+    </div>
+    <div class="kpi">
+      <span class="kpi-icon">📅</span>
+      <div class="kpi-label">Total Bookings</div>
+      <div class="kpi-value">{{ total_bookings }}</div>
+      <div class="kpi-sub">all time</div>
+    </div>
+    <div class="kpi">
+      <span class="kpi-icon">🗓</span>
+      <div class="kpi-label">Bookings Today</div>
+      <div class="kpi-value">{{ bookings_today }}</div>
+      <div class="kpi-sub">created today</div>
+    </div>
+    <div class="kpi">
+      <span class="kpi-icon">⚽</span>
+      <div class="kpi-label">Active Clubs</div>
+      <div class="kpi-value">{{ total_clubs }}</div>
+      <div class="kpi-sub">on platform</div>
+    </div>
+    <div class="kpi">
+      <span class="kpi-icon">🏆</span>
+      <div class="kpi-label">Total Teams</div>
+      <div class="kpi-value">{{ total_teams }}</div>
+      <div class="kpi-sub">registered</div>
+    </div>
+  </div>
+
+  <!-- ── Booking Status Breakdown ──────────────────── -->
+  <div class="dash-label">⚡ Booking Status Breakdown</div>
+  <div class="status-row">
+    <div class="st-chip">
+      <div class="st-dot" style="background:#4ade80"></div>
+      <div class="st-info">
+        <span class="st-num" style="color:#4ade80">{{ status_completed }}</span>
+        <span class="st-lbl">Completed</span>
+      </div>
+    </div>
+    <div class="st-chip">
+      <div class="st-dot" style="background:#60a5fa"></div>
+      <div class="st-info">
+        <span class="st-num" style="color:#60a5fa">{{ status_pending }}</span>
+        <span class="st-lbl">Pending</span>
+      </div>
+    </div>
+    <div class="st-chip">
+      <div class="st-dot" style="background:#fb923c"></div>
+      <div class="st-info">
+        <span class="st-num" style="color:#fb923c">{{ status_pending_pay }}</span>
+        <span class="st-lbl">Pending Pay</span>
+      </div>
+    </div>
+    <div class="st-chip">
+      <div class="st-dot" style="background:#f87171"></div>
+      <div class="st-info">
+        <span class="st-num" style="color:#f87171">{{ status_canceled }}</span>
+        <span class="st-lbl">Canceled</span>
+      </div>
+    </div>
+    <div class="st-chip">
+      <div class="st-dot" style="background:#94a3b8"></div>
+      <div class="st-info">
+        <span class="st-num" style="color:#94a3b8">{{ status_rejected }}</span>
+        <span class="st-lbl">Rejected</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main two-col ───────────────────────────────── -->
+  <div class="dash-label">🗂 Activity</div>
+  <div class="two-col">
+
+    <!-- Recent Bookings -->
+    <div class="panel">
+      <div class="panel-head">🗓 &nbsp;Recent Bookings</div>
+      <div class="panel-body">
+        {% if recent_bookings %}
+        <table class="dt">
+          <thead>
+            <tr>
+              <th>Club</th>
+              <th>Pitch</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for b in recent_bookings %}
+            <tr>
+              <td>{{ b.pitch.club.name|default:"—" }}</td>
+              <td>{{ b.pitch.name|default:"—" }}</td>
+              <td>{{ b.date }}</td>
+              <td style="color:var(--muted);font-size:10px;">{{ b.start_time|time:"H:i" }}–{{ b.end_time|time:"H:i" }}</td>
+              <td>
+                {% if b.status == 1 %}
+                  <span class="badge bb">Pending Club</span>
+                {% elif b.status == 2 %}
+                  <span class="badge by">New Time Proposed</span>
+                {% elif b.status == 3 %}
+                  <span class="badge bo">Pending Payment</span>
+                {% elif b.status == 4 %}
+                  <span class="badge bg">Completed</span>
+                {% elif b.status == 5 %}
+                  <span class="badge br">Canceled</span>
+                {% elif b.status == 6 %}
+                  <span class="badge bm">Rejected</span>
+                {% elif b.status == 7 %}
+                  <span class="badge br">No Show</span>
+                {% elif b.status == 8 %}
+                  <span class="badge br">Disputed</span>
+                {% elif b.status == 9 %}
+                  <span class="badge bm">Expired</span>
+                {% elif b.status == 10 %}
+                  <span class="badge bm">Closed Period</span>
+                {% elif b.status == 11 %}
+                  <span class="badge bo">Awaiting Pay</span>
+                {% elif b.status == 12 %}
+                  <span class="badge by">Confirming Pay</span>
+                {% else %}
+                  <span class="badge bm">{{ b.status }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+          <div class="empty">No bookings yet.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Quick Actions -->
+      <div class="panel">
+        <div class="panel-head">⚡ &nbsp;Quick Actions</div>
+        <div class="qa-grid">
+          <a class="qa-btn" href="/admin/player_booking/booking/add/"><span class="qa-icon">➕</span> New Booking</a>
+          <a class="qa-btn" href="/admin/player_booking/booking/"><span class="qa-icon">📋</span> All Bookings</a>
+          <a class="qa-btn" href="/admin/clubs-overview/"><span class="qa-icon">🏟</span> Clubs Overview</a>
+          <a class="qa-btn" href="/admin/dashboard_manage/club/add/"><span class="qa-icon">➕</span> Add Club</a>
+          <a class="qa-btn" href="/admin/core/user/"><span class="qa-icon">👥</span> All Users</a>
+          <a class="qa-btn" href="/admin/player_team/team/"><span class="qa-icon">🏆</span> All Teams</a>
+          <a class="qa-btn" href="/admin/player_booking/review/"><span class="qa-icon">⭐</span> Reviews</a>
+          <a class="qa-btn" href="/admin/management/requesterrorlog/"><span class="qa-icon">🔴</span> Error Logs</a>
+        </div>
+      </div>
+
+      <!-- New Users Today -->
+      <div class="panel">
+        <div class="panel-head">👤 &nbsp;New Users Today</div>
+        <div class="panel-body">
+          {% if new_users_today %}
+          <table class="dt">
+            <thead>
+              <tr><th>Name / Phone</th><th>Time</th></tr>
+            </thead>
+            <tbody>
+              {% for u in new_users_today %}
+              <tr>
+                <td>
+                  <a href="/admin/core/user/{{ u.id }}/change/" style="color:var(--text) !important;">
+                    {{ u.full_name|default:u.phone }}
+                  </a>
+                </td>
+                <td style="color:var(--muted);font-size:10px;">{{ u.created_at|time:"H:i" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+            <div class="empty">No new users today.</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

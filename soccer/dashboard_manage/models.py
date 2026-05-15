@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator, FileExt
 from django.utils.translation import gettext_lazy as _
 from core.models import User
 from core.utils import upload_to_model_name
+from core.governorates import SyrianGovernorate
 from .validators import validate_working_days
 import uuid
 
@@ -33,6 +34,8 @@ class Club(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    governorate = models.PositiveSmallIntegerField(choices=SyrianGovernorate.choices)
+
 
 
 

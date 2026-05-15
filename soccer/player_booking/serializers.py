@@ -1,7 +1,9 @@
 from rest_framework import serializers
-
+import datetime
+from django.utils import timezone
 from dashboard_manage.models import Club, ClubPricing, Pitch, ClubDeposit
 from management.models import Feature
+from core.services.notification_service import NotificationService
 from soccer.enm import BOOKING_STATUS_DENIED
 from  player_booking.models import Booking, BookingStatus, Coupon, PayStatus, BookingEquipment,Review
 from django.db import transaction
@@ -18,7 +20,25 @@ from soccer.settings import MEDIA_URL
 
 from .services.BookingHistoryService import UserBookingItem
 
+class PendingActionSerializer(serializers.ModelSerializer):
+    pitch_name = serializers.CharField(source='pitch.name', read_only=True)
+    club_name  = serializers.CharField(source='club.name',  read_only=True)
+    make_rate  = serializers.BooleanField(read_only=True)   # from annotation
+    make_score = serializers.BooleanField(read_only=True)   # from annotation
 
+    class Meta:
+        model  = Booking
+        fields = [
+            'id',
+            'date',
+            'start_time',
+            'end_time',
+            'is_challenge',
+            'pitch_name',
+            'club_name',
+            'make_rate',
+            'make_score',
+        ]
 
 class PitchInBookingSerializer(serializers.Serializer):
     id   = serializers.UUIDField(read_only=True)
@@ -84,22 +104,15 @@ class ChallengeDetailSerializer(serializers.ModelSerializer):
 
     def get_challenged_team(self, obj):
         return TeamInChallengeSerializer(obj.challenged_team, context=self.context).data
+    
+
 
 class BookingEquipmentSerializer(serializers.Serializer):
     name = serializers.CharField(source="equipment_def.name")
-    description = serializers.CharField(source="equipment_def.description")
-    image = serializers.SerializerMethodField()
+    # description = serializers.CharField(source="equipment_def.description")
     quantity = serializers.IntegerField()
     price = serializers.FloatField()
 
-    def get_image(self, obj):
-        request = self.context.get("request")
-        image_field = obj.equipment_def.image
-
-        if not image_field:
-            return None
-
-        return request.build_absolute_uri(image_field.url) if request else image_field.url
 
 
 class BookingDetailSerializer(serializers.ModelSerializer):
@@ -114,8 +127,12 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
-    is_coupon = serializers.SerializerMethodField()
+    # is_coupon = serializers.SerializerMethodField()
     coupon    = serializers.SerializerMethodField()
+    make_score = serializers.SerializerMethodField()
+    make_rate  = serializers.SerializerMethodField()
+    player_side   = serializers.SerializerMethodField()
+    player_result = serializers.SerializerMethodField()
     
     class Meta:
         model  = Booking
@@ -130,14 +147,18 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'status',
             'status_display',
             'payment_status',
-            'is_challenge',
+            # 'is_challenge',
             'pitch',
             'club',
             'challenge',
             'equipment',
-            'is_coupon',
+            # 'is_coupon',
             'coupon',
-            'created_at'
+            'created_at',
+            'make_score',
+            'make_rate',
+            'player_side',
+            'player_result',
         ]
 
     def get_challenge(self, obj):
@@ -170,6 +191,107 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         if obj.payment_status == PayStatus.UNKNOWN:
             return None
         return obj.get_payment_status_display()
+
+    def _get_player_record(self, obj):
+        """Return the ChallengePlayerBooking for the logged-in user (no DB hit — uses prefetch)."""
+        user_id = str(self.context['request'].user.id)
+        for cp in getattr(obj, 'challenge_players', []):
+            if str(cp.player_id) == user_id:
+                return cp
+        return None
+
+    def get_make_score(self, obj):
+        if not obj.is_challenge:
+            return False
+        if obj.status != BookingStatus.COMPLETED:
+            return False
+        cp = self._get_player_record(obj)
+        if cp is None:
+            return False
+        return not cp.score_done
+
+    def get_make_rate(self, obj):
+        if obj.status != BookingStatus.COMPLETED:
+            return False
+
+        if not obj.is_challenge:
+            # regular booking — check rate_done on the booking itself
+            return not obj.rate_done
+        else:
+            # challenge booking — check rate_done on the player's ChallengePlayerBooking row
+            cp = self._get_player_record(obj)
+            if cp is None:
+                return False
+            return not cp.rate_done
+
+    def get_player_side(self, obj):
+        """'team' | 'challenged_team' | None"""
+        if not obj.is_challenge:
+            return None
+
+        challenges = getattr(obj, 'challenges', [])
+        if not challenges:
+            return None
+
+        player_team_id = getattr(obj, '_player_team_id', None)
+        if not player_team_id:
+            return None
+
+        challenge = challenges[0]
+        if player_team_id == str(challenge.team_id):
+            return 'team'
+        if player_team_id == str(challenge.challenged_team_id):
+            return 'challenged_team'
+        return None
+
+    def get_player_result(self, obj):
+        """فاز | خسر | تعادل | قريباً | لم_يتم_التصويت | None"""
+        if not obj.is_challenge:
+            return None
+
+        challenges = getattr(obj, 'challenges', [])
+        if not challenges:
+            return None
+
+        challenge = challenges[0]
+        player_team_id = getattr(obj, '_player_team_id', None)
+        if not player_team_id:
+            return None
+
+        if obj.status in [
+            BookingStatus.PENDING_PAY,
+            BookingStatus.PAY,
+            BookingStatus.CHECK_PAY,
+            BookingStatus.COMPLETED,
+            BookingStatus.PENDING_PLAYER,
+            BookingStatus.PENDING_MANAGER,
+            ]:
+        
+
+            if not challenge.score_finalized:
+                # challenge time has passed but no one voted yet
+                now = timezone.now()
+                challenge_end = datetime.combine(challenge.date, challenge.end_time)
+                challenge_end = timezone.make_aware(challenge_end) if timezone.is_naive(challenge_end) else challenge_end
+
+                if now > challenge_end:
+                    return 'لم_يتم_التصويت'
+
+                return 'قريباً'
+
+
+
+            is_first_team = player_team_id == str(challenge.team_id)
+            my_score  = challenge.result_team            if is_first_team else challenge.result_challenged_team
+            opp_score = challenge.result_challenged_team if is_first_team else challenge.result_team
+
+            if my_score > opp_score:
+                return 'فاز'
+            if my_score < opp_score:
+                return 'خسر'
+            return 'تعادل'
+        return None
+
 
 class ChallengeResultSerializer(serializers.ModelSerializer):
     team             = TeamInChallengeSerializer(read_only=True)
@@ -322,6 +444,8 @@ class TagSerializer(serializers.Serializer):
 
 class ClubListSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField()
+    governorate = serializers.CharField(source='get_governorate_display')
+
 
     class Meta:
         model = Club
@@ -339,6 +463,7 @@ class ClubListSerializer(serializers.ModelSerializer):
             "rating_count",
             "flexible_reservation",
             "tags",
+            'governorate'
         ]
 
     def get_tags(self, obj):
@@ -576,7 +701,16 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
                 booking.save(update_fields=['final_price', 'updated_at', 'deposit', 'coupon'])
 
 
-                
+        NotificationService.send_notification(
+            user=request_user,
+            title="تم طلب حجز جديد",
+            body=f"""
+تم انشاء حجز جديد في {validated_data['date']}
+من الساعة {validated_data['start_time']} الى {validated_data['end_time']}
+            """,
+            notification_type='create_Booking',
+            helper_id=booking.id,
+        )
 
         booking._applied_coupon_code = coupon_code
         return booking
@@ -600,6 +734,7 @@ class EquipmentBookingSerializer(serializers.Serializer):
     )
 
 class PitchSearchSerializer(serializers.Serializer):
+    governorate = serializers.IntegerField(required=False, allow_null=True)
     date = serializers.DateField(required=True)
     start_time = serializers.TimeField(required=True)
     end_time = serializers.TimeField(required=True)
@@ -698,13 +833,35 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
         booking = validated_data['booking']
         player  = self.context['request'].user
 
-        return Review.objects.create(
+        review = Review.objects.create(
             booking=booking,
             club=booking.club,
             player=player,
             rating=validated_data['rating'],
             comment=validated_data.get('comment', ''),
         )
+
+        if not booking.is_challenge:
+            booking.rate_done = True
+            booking.save(update_fields=['rate_done'])
+        else:
+            # Mark this player's record as rated
+            ChallengePlayerBooking.objects.filter(
+                booking=booking,
+                player=player
+            ).update(rate_done=True)
+
+            # If all players have reviewed, mark the booking itself as done
+            all_rated = not ChallengePlayerBooking.objects.filter(
+                booking=booking,
+                rate_done=False
+            ).exists()
+
+            if all_rated:
+                booking.rate_done = True
+                booking.save(update_fields=['rate_done'])
+
+        return review
 
 
 class ReviewListSerializer(serializers.ModelSerializer):

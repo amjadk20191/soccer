@@ -1,0 +1,145 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#0b0d12;--surface:#11141c;--surface2:#181c27;--border:#1e2435;
+    --g:#4ade80;--b:#60a5fa;--o:#fb923c;--r:#f87171;--y:#facc15;--muted:#64748b;--text:#e2e8f0;
+    --radius:12px;
+  }
+  body,#container{background:var(--bg)!important;color:var(--text)!important;font-family:'DM Mono',monospace!important;}
+  #header{background:var(--surface)!important;border-bottom:1px solid var(--border)!important;box-shadow:none!important;}
+  #branding h1 a{color:var(--g)!important;font-family:'Syne',sans-serif!important;font-weight:800!important;}
+  #nav-sidebar{background:var(--surface)!important;border-right:1px solid var(--border)!important;}
+  #content,#content-main{background:var(--bg)!important;}
+  .breadcrumbs{background:var(--surface)!important;border-bottom:1px solid var(--border)!important;color:var(--muted)!important;}
+  a{color:var(--b)!important;} a:hover{color:var(--g)!important;}
+  #nav-sidebar a{color:var(--text)!important;font-size:12px!important;}
+
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+  .page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
+  .back-btn{padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text)!important;font-size:12px;text-decoration:none!important;transition:border-color .15s;}
+  .back-btn:hover{border-color:var(--g);}
+
+  .search-bar{margin-bottom:20px;}
+  .search-bar input{width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;outline:none;box-sizing:border-box;}
+  .search-bar input:focus{border-color:var(--b);}
+  .search-bar input::placeholder{color:var(--muted);}
+
+  .clubs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+
+  .club-card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;cursor:pointer;text-decoration:none!important;display:block;
+    transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+    animation:up .4s ease both;
+  }
+  .club-card:hover{transform:translateY(-3px);border-color:var(--g);box-shadow:0 8px 28px rgba(0,0,0,.4);color:var(--text)!important;}
+
+  .club-card-head{display:flex;align-items:center;gap:14px;margin-bottom:16px;}
+  .club-logo{width:48px;height:48px;border-radius:10px;object-fit:cover;background:var(--surface2);border:1px solid var(--border);flex-shrink:0;}
+  .club-logo-placeholder{width:48px;height:48px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+  .club-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;}
+  .club-meta{font-size:11px;color:var(--muted);}
+
+  .club-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .cs{text-align:center;padding:8px 4px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);}
+  .cs-num{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;line-height:1;}
+  .cs-lbl{font-size:9px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.06em;}
+
+  .badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;}
+  .bg{background:rgba(74,222,128,.12);color:#4ade80;}
+  .br{background:rgba(248,113,113,.12);color:#f87171;}
+  .inactive-badge{background:rgba(248,113,113,.12);color:#f87171;}
+  .active-badge{background:rgba(74,222,128,.12);color:#4ade80;}
+
+  .rating{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--y);}
+
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;}
+
+  @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+
+  <div class="page-header">
+    <div class="page-title">⚽ &nbsp;Clubs Overview</div>
+    <a class="back-btn" href="/admin/">← Dashboard</a>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="clubSearch" placeholder="🔍  Search clubs by name or address…" onkeyup="filterClubs()">
+  </div>
+
+  {% if clubs %}
+  <div class="clubs-grid" id="clubsGrid">
+    {% for c in clubs %}
+    <a class="club-card" href="/admin/clubs-overview/{{ c.obj.id }}/"
+       data-name="{{ c.obj.name|lower }}" data-addr="{{ c.obj.address|lower }}">
+
+      <div class="club-card-head">
+        {% if c.obj.logo %}
+          <img class="club-logo" src="{{ c.obj.logo.url }}" alt="{{ c.obj.name }}">
+        {% else %}
+          <div class="club-logo-placeholder">🏟</div>
+        {% endif %}
+        <div>
+          <div class="club-name">{{ c.obj.name }}</div>
+          <div class="club-meta">{{ c.obj.address }}</div>
+          <div class="club-meta" style="margin-top:4px;">
+            <span class="{% if c.obj.is_active %}active-badge{% else %}inactive-badge{% endif %} badge">
+              {% if c.obj.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+            &nbsp;
+            <span class="rating">★ {{ c.obj.rating_avg }} ({{ c.obj.rating_count }})</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="club-stats">
+        <div class="cs">
+          <div class="cs-num" style="color:var(--text)">{{ c.total }}</div>
+          <div class="cs-lbl">Total</div>
+        </div>
+        <div class="cs">
+          <div class="cs-num" style="color:var(--g)">{{ c.completed }}</div>
+          <div class="cs-lbl">Done</div>
+        </div>
+        <div class="cs">
+          <div class="cs-num" style="color:var(--b)">{{ c.pending }}</div>
+          <div class="cs-lbl">Pending</div>
+        </div>
+        <div class="cs">
+          <div class="cs-num" style="color:var(--o)">{{ c.pay }}</div>
+          <div class="cs-lbl">Pay</div>
+        </div>
+        <div class="cs">
+          <div class="cs-num" style="color:var(--r)">{{ c.canceled }}</div>
+          <div class="cs-lbl">Canceled</div>
+        </div>
+      </div>
+
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+    <div class="empty-state">No clubs found.</div>
+  {% endif %}
+
+</div>
+
+<script>
+function filterClubs() {
+  const q = document.getElementById('clubSearch').value.toLowerCase();
+  document.querySelectorAll('.club-card').forEach(card => {
+    const match = card.dataset.name.includes(q) || card.dataset.addr.includes(q);
+    card.style.display = match ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

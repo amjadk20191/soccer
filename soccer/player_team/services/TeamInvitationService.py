@@ -4,6 +4,7 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from core.models import User
+from core.governorates import SyrianGovernorate
 from ..models import Team, TeamMember, Request, MemberStatus
 from django.db.models import Count, Q
 from django.conf import settings
@@ -249,6 +250,7 @@ class TeamInvitationService:
             'created_at',
             'recruitment_post_id',
             'team__name',
+            'team__governorate',
             'team__logo',
             'recruitment_post__type',
             'recruitment_post__description'
@@ -272,6 +274,7 @@ class TeamInvitationService:
             'created_at',
             'recruitment_post_id',
             'player__username',
+            'player__governorate',
             'player__full_name',
             'recruitment_post__type',
             'recruitment_post__description'
@@ -280,7 +283,7 @@ class TeamInvitationService:
         return invitations
     
     @classmethod
-    def search_users_by_username(cls, captain_id, current_team, username_filter, request, limit=10):
+    def search_users_by_username(cls, captain_id, current_team, username_filter, request, *, governorate=None, limit=10):
         """
         Search users by username filter and return top matching users.
         
@@ -294,17 +297,19 @@ class TeamInvitationService:
         if not username_filter or not username_filter.strip():
             return User.objects.none()
         
+    
 
-        # 1. First Query: Get the base list of users
-        users = list(
-            User.objects.filter(
-                username__icontains=username_filter.strip(), 
-                role=1, 
-                is_active=True
-            )
+        qs = (
+            User.objects
+            .filter(username__icontains=username_filter.strip(), role=1, is_active=True)
+            .exclude(id=captain_id)
             .order_by('username')
-            .values('id', 'username', 'full_name', 'image').exclude(id=captain_id)[:limit]
         )
+
+        if governorate is not None:          # ← add
+            qs = qs.filter(governorate=governorate)
+
+        users = list(qs.values('id', 'username', 'full_name', 'image', 'governorate')[:limit])  # ← add governorate
 
         # Extract IDs to use in the next two queries
         user_ids = [u['id'] for u in users]
@@ -342,6 +347,7 @@ class TeamInvitationService:
                 user['image'] = request.build_absolute_uri(settings.MEDIA_URL + user['image'])
             else:
                 user['image'] = None
+            user['governorate'] = SyrianGovernorate(user['governorate']).label if user['governorate'] is not None else None
 
         return users
     

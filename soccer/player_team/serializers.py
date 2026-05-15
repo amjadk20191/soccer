@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from core.governorates import SyrianGovernorate
 from .models import Team, TeamMember, MemberStatus, Request, TeamImage
 
 class TeamImageerializer(serializers.ModelSerializer):
@@ -80,6 +82,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
     logo = serializers.SerializerMethodField()
     members = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()
+    governorate = serializers.CharField(source='get_governorate_display')
 
     class Meta:
         model = Team
@@ -103,6 +106,7 @@ class TeamDetailsSerializer(serializers.ModelSerializer):
             'members',
             'members_count',
             'created_at',
+            'governorate'
         ]
 
     
@@ -199,6 +203,7 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     recruitment_post_type = serializers.CharField(source='recruitment_post.get_type_display', read_only=True, allow_null=True)
     recruitment_post_description = serializers.CharField(source='recruitment_post.description', read_only=True, allow_null=True)
+    governorate = serializers.CharField(source='team.get_governorate_display')
 
     class Meta:
         model = Request
@@ -211,7 +216,8 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
             'recruitment_post_type',
             'recruitment_post_description',
             'recruitment_post_id',
-            'created_at'
+            'created_at',
+            'governorate'
         ]
         read_only_fields = ['id', 'status', 'created_at']
 
@@ -227,6 +233,7 @@ class InvitationRequestSerializer(serializers.ModelSerializer):
 class ShowTeamInvitationSendSerializer(serializers.ModelSerializer):
     player_username = serializers.CharField(source='player.username', read_only=True)
     player_full_name = serializers.CharField(source='player.full_name', read_only=True)
+    governorate = serializers.CharField(source='player.get_governorate_display', read_only=True)
     # team_logo = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     recruitment_post_type = serializers.CharField(source='recruitment_post.get_type_display', read_only=True, allow_null=True)
@@ -243,7 +250,9 @@ class ShowTeamInvitationSendSerializer(serializers.ModelSerializer):
             'player_username',
             'player_full_name',
             'recruitment_post_type',
-            'recruitment_post_description'
+            'recruitment_post_description',
+            'governorate'
+
         ]
         read_only_fields = ['id', 'status', 'created_at']
 
@@ -271,6 +280,8 @@ class UserSearchSerializer(serializers.Serializer):
             'max_length': 'تأكد من أن هذه القيمة لا تحتوي على أكثر من {max_length} حرف.',
         }
     )
+    governorate = serializers.IntegerField(required=False, allow_null=True)  # ← add
+
 
     def validate_username(self, value):
         """Validate username filter is not empty"""
@@ -314,7 +325,8 @@ class TeamCreateSerializer(serializers.ModelSerializer):
                 'name',
                 'logo',
                 'time',
-                'address']
+                'address',
+                'governorate']
         extra_kwargs = {
             'name': {
                 'error_messages': {
@@ -350,6 +362,11 @@ class TeamCreateSerializer(serializers.ModelSerializer):
         if not value or not value.strip():
             raise serializers.ValidationError({"name": "لا يمكن أن يكون اسم الفريق فارغًا."})
         return value.strip()
+    
+    def validate_governorate(self, value):
+        if value not in SyrianGovernorate.values:
+            raise serializers.ValidationError({"governorate":'اختر محافظة صحيحة.'})
+        return value
 
 from django.conf import settings
 class TeamUpdateSerializer(serializers.ModelSerializer):
@@ -364,7 +381,9 @@ class TeamUpdateSerializer(serializers.ModelSerializer):
                 'logo',
                 'time',
                 'address',
-                'challenge_mode']
+                'challenge_mode',
+                'governorate'
+                ]
         extra_kwargs = {
             'name': {
                 'error_messages': {
@@ -399,6 +418,11 @@ class TeamUpdateSerializer(serializers.ModelSerializer):
                 }
             },
         }
+
+    def validate_governorate(self, value):
+        if value not in SyrianGovernorate.values:
+            raise serializers.ValidationError({"governorate":'اختر محافظة صحيحة.'})
+        return value
 
     def validate_name(self, value):
         """Validate team name is not empty"""

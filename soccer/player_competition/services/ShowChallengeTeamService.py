@@ -8,7 +8,12 @@ from player_team.models import Team, TeamMember, MemberStatus
 class ShowChallengeTeamService:
 
     @staticmethod
-    def get_challenge_teams(team_id: str, user_id: str, *, name: str | None = None, min_avg_age: int | None = None, max_avg_age: int | None = None):
+    def get_challenge_teams(team_id: str, 
+                            user_id: str, *
+                            , name: str | None = None, min_avg_age: int | None = None,
+                            max_avg_age: int | None = None,
+                            governorate: int | None = None,     
+                            ):
 
         if not Team.objects.filter(id=team_id, captain_id=user_id).exists():
             raise ValidationError({"error": "حصرًا للقائد فقط."})
@@ -43,7 +48,7 @@ class ShowChallengeTeamService:
                 'id', 'name',
                 'goals_scored', 'total_wins', 'total_losses',
                 'created_at',
-                'logo__logo',
+                'logo__logo', 'governorate'
             )
             .order_by('-total_wins', '-goals_scored')
         )
@@ -56,5 +61,8 @@ class ShowChallengeTeamService:
 
         if max_avg_age is not None:
             qs = qs.filter(avg_player_age__lte=max_avg_age)
+
+        if governorate is not None:                          
+            qs = qs.filter(governorate=governorate)
 
         return qs

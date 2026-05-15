@@ -30,7 +30,8 @@ VALID_RESULTS = [
             'قريباً',
             'فوز',
             'خسارة',
-            'تعادل'
+            'تعادل',
+            'لم_يتم_التصويت'
         ]
 
 
@@ -131,8 +132,18 @@ class ChallengeTeamsView(ListAPIView):
             name        = self._get_name(),
             min_avg_age = min_avg_age,
             max_avg_age = max_avg_age,
+            governorate = self._get_governorate(), 
         )
     
+    def _get_governorate(self) -> int | None:           # ← add
+        raw = self.request.query_params.get('governorate')
+        if raw is None:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            raise ValidationError({'error': 'يجب أن تكون قيمة المحافظة عددًا صحيحًا.'})
+        
     def _get_name(self) -> str | None:
         name = self.request.query_params.get('name', '').strip()
         return name or None
@@ -199,6 +210,7 @@ class CreateChallengeAPIView(APIView):
                 challenge=challenge,
                 equipments=equipments,
             )
+
         
         # 4. Return Success Response
         return Response(
