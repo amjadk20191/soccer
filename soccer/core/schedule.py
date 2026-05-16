@@ -49,3 +49,33 @@ def register_schedules():
             'minutes': 5,
         }
     )
+
+
+    
+    Schedule.objects.get_or_create(
+        name='reject_pending_manager_bookings',
+        defaults={
+            'func': 'dashboard_booking.tasks.reject_pending_manager_bookings',
+            'schedule_type': Schedule.MINUTES,
+            'minutes': 5,
+        }
+    )
+
+    
+    Schedule.objects.get_or_create(
+        name='reject_expired_booking_notifications',
+        defaults={
+            'func': 'dashboard_booking.tasks.reject_expired_booking_notifications',
+            'schedule_type': Schedule.MINUTES,
+            'minutes': 5,
+        }
+    )
+    
+    Schedule.objects.get_or_create(
+        name='reject_expired_pending_team_challenges',
+        defaults={
+            'func': 'dashboard_booking.tasks.reject_expired_pending_team_challenges',
+            'schedule_type': Schedule.MINUTES,
+            'minutes': 5,
+        }
+    )

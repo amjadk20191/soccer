@@ -1,5 +1,4 @@
 from rest_framework import serializers
-import datetime
 from django.utils import timezone
 from dashboard_manage.models import Club, ClubPricing, Pitch, ClubDeposit
 from management.models import Feature
@@ -8,16 +7,14 @@ from soccer.enm import BOOKING_STATUS_DENIED
 from  player_booking.models import Booking, BookingStatus, Coupon, PayStatus, BookingEquipment,Review
 from django.db import transaction
 from django.conf import settings
-from datetime import date, timedelta
 from core.services.CouponService import CouponService
 from dashboard_booking.services.PricingService import PricingService
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
-from datetime import datetime
 from player_competition.models import Challenge
 from itertools import groupby
 from player_competition.models import ChallengePlayerBooking
 from soccer.settings import MEDIA_URL
-
+from datetime import datetime, date, timedelta
 from .services.BookingHistoryService import UserBookingItem
 
 class PendingActionSerializer(serializers.ModelSerializer):
@@ -271,9 +268,9 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             if not challenge.score_finalized:
                 # challenge time has passed but no one voted yet
                 now = timezone.now()
-                challenge_end = datetime.combine(challenge.date, challenge.end_time)
-                challenge_end = timezone.make_aware(challenge_end) if timezone.is_naive(challenge_end) else challenge_end
-
+                challenge_end = timezone.make_aware(
+                    datetime.combine(challenge.date, challenge.end_time)
+                    )
                 if now > challenge_end:
                     return 'لم_يتم_التصويت'
 
@@ -393,7 +390,7 @@ class ConsolidatedBookingQuerySerializer(serializers.Serializer):
         Validate that date is not in the past
         Optional: Remove if you want to allow past dates
         """
-        if value < datetime.now().date():
+        if value < timezone.now().date():
             raise serializers.ValidationError({"error": "تاريخ الحجز لا يمكن أن يكون في الماضي."})
         return value
 
@@ -572,7 +569,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
 
 
     def validate_date(self, value):
-        today = date.today()
+        today = timezone.localtime(timezone.now()).date()
         if not (today + timedelta(days=settings.MIN_NUM_DAY_BEFORE_BOOKING) <= value <= today + timedelta(days=settings.MAX_NUM_DAY_BEFORE_BOOKING)):
             raise serializers.ValidationError({"error": f'تاريخ الحجز يجب أن يكون بين {settings.MIN_NUM_DAY_BEFORE_BOOKING} و {settings.MAX_NUM_DAY_BEFORE_BOOKING} يومًا من اليوم.'})
         return value

@@ -18,7 +18,7 @@ def log_opening_time_change(sender, instance, **kwargs):
 
     ClubOpeningTimeHistory.objects.update_or_create(
         club_id=instance.pk,
-        created_at=timezone.now().date(),
+        created_at=timezone.localtime(timezone.now()).date(),
         defaults={
             "open_time": instance.open_time,
             "close_time": instance.close_time,

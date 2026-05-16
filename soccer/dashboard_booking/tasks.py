@@ -329,7 +329,7 @@ def expire_pending_bookings():
 def reject_pending_manager_bookings():
 
 
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
 
     expired_booking_qs = (
         Booking.objects
@@ -382,12 +382,10 @@ def reject_expired_booking_notifications():
 
     print(f'[reject_booking_notifications] updated {updated} notifications')
 
-
-
 def reject_expired_pending_team_challenges():
 
 
-    now = timezone.now()
+    now = timezone.localtime(timezone.now())
 
     updated = (
         Challenge.objects

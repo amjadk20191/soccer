@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (ClubEquipmentGenericsList, ClubManagerView, WeekdayPricingViewSet, DatePricingViewSet, PitchViewSet, EquipmentGenericsList,
                     RevenueReportView, BookingCountsReportView, HourlyUtilisationReportView, ClubDepositViewSet,
-                    EquipmentSalesReportView, BookingDurationViewSet,  GetPitchesTypesView)
+                    EquipmentSalesReportView, BookingDurationViewSet,  GetPitchesTypesView, PendingBookingsCountView)
 router = DefaultRouter()
 
 router.register(r'pricing/weekday', WeekdayPricingViewSet, basename='pricing-weekday')
@@ -19,6 +19,7 @@ urlpatterns = [
     path("dashboard/bookings/",  BookingCountsReportView.as_view()),
     path("dashboard/hourly/",    HourlyUtilisationReportView.as_view()),
     path("dashboard/equipment/", EquipmentSalesReportView.as_view()),
+    path("dashboard/pending-bookings-count/", PendingBookingsCountView.as_view()),
     path('get-pitch-types/', GetPitchesTypesView.as_view(), name='get-pitch-types'),
     path('', include(router.urls)),
 

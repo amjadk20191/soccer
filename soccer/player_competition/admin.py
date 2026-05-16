@@ -2,7 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
-from .models import Challenge, ChallengeStatus, ChallengePlayerBooking, ChallengeEquipment
+from .models import Challenge, ChallengeStatus, ChallengePlayerBooking, ChallengeEquipment, ScoreSubmission
 
 
 @admin.register(ChallengeEquipment)
@@ -29,6 +29,14 @@ def mark_rejected(modeladmin, request, queryset):
 def mark_canceled(modeladmin, request, queryset):
     queryset.update(status=ChallengeStatus.CANCELED)
 
+@admin.register(ScoreSubmission)
+class ScoreSubmissionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'challenge', 'player', 'result_team', 'result_challenged_team', 'created_at')
+    search_fields = ('challenge__id', 'player__phone', 'player__full_name')
+    list_filter = ('created_at',)
+    readonly_fields = ('created_at',)
+    ordering = ('-created_at',)
+    list_select_related = ('challenge', 'player')
 
 @admin.register(Challenge)
 class ChallengeAdmin(admin.ModelAdmin):

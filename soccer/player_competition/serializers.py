@@ -637,7 +637,7 @@ class CreateChallengeSerializer(serializers.Serializer):
 
 
     def validate_date(self, value):
-        today = date.today()
+        today = tz.localtime(timezone.now()).date()
         print(today)
         if not (today + timedelta(days=settings.MIN_NUM_DAY_BEFORE_CHALLENGE) <= value <= today + timedelta(days=settings.MAX_NUM_DAY_BEFORE_CHALLENGE)):
             raise serializers.ValidationError({"error": f'تاريخ التحدي يجب أن يكون بين {settings.MIN_NUM_DAY_BEFORE_CHALLENGE} و {settings.MAX_NUM_DAY_BEFORE_CHALLENGE} يومًا من اليوم.'})

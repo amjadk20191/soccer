@@ -4,6 +4,8 @@ from django.db.models import Q
 from datetime import date, timedelta
 from rest_framework.exceptions import ValidationError
 from django.core.files.storage import default_storage
+from django.utils import timezone
+
 class ClubTimeService:
     """
     Service class for managing club time schedules and pricing calculations.
@@ -135,7 +137,7 @@ class ClubTimeService:
             - day_indices: List of weekday indices corresponding to dates
         """
         # Generate date range: today, today+1, today+2, ..., today+(number_of_day-1)
-        today = date.today()
+        today = timezone.localtime(timezone.now()).date()
         dates = [today + timedelta(days=i) for i in range(number_of_day)]
         
         # Convert Python weekday (0=Monday, 6=Sunday) to custom weekday index

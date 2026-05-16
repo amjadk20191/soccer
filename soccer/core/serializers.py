@@ -115,12 +115,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'null':     'لا يمكن أن تكون هذه القيمة فارغة.',
         }
     )
+    governorate_display = serializers.CharField(source='get_governorate_display', read_only=True)
 
     class Meta:
         model = User
         fields = [
             'phone', 'password', 'full_name', 'username','image'  ,
-            'birthday', 'height', 'weight', 'foot_preference', 'governorate'
+            'birthday', 'height', 'weight', 'foot_preference', 'governorate', 'governorate_display'
         ]
         extra_kwargs = {
             'phone': {

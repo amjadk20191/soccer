@@ -207,8 +207,14 @@ class ActiveClubListAPIView(generics.ListAPIView):
             except ValueError:
                 raise ValidationError({"governorate": "يجب أن تكون قيمة رقمية صحيحة."})
 
-        return queryset
-    
+        search = self.request.query_params.get("search")
+        if search is not None:
+            search = search.strip()
+            if not search:
+                raise ValidationError({"search": "لا يمكن أن يكون البحث فارغاً."})
+            queryset = queryset.filter(name__icontains=search)
+
+        return queryset    
 
 @api_view(['GET'])
 def ClubOpeningPrices(request):

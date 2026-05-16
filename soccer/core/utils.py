@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 import cv2
 import numpy as np
+from django.utils import timezone
 
 DEFAULT_USER_IMAGE = 'users/images/Default/avatar.png'
 
@@ -10,11 +11,11 @@ DEFAULT_USER_IMAGE = 'users/images/Default/avatar.png'
 def upload_to_model_name(instance, filename):
     model_name = instance._meta.model_name
     safe_filename = f"{uuid.uuid4().hex}{filename}"
-    
+    now = timezone.localtime(timezone.now())
     return os.path.join(
         model_name,
-        datetime.now().strftime('%Y'),
-        datetime.now().strftime('%m'),
+        now.strftime('%Y'),
+        now.strftime('%m'),
         safe_filename
     )
 

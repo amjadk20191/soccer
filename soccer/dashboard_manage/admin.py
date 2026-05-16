@@ -1,7 +1,7 @@
 # clubs/admin.py
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import (Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment, 
+from .models import (BookingDuration, Club, ClubPricing, Pitch, ReservationTypeHoure, Equipment, 
     ClubEquipment,
     BookingPriceStatistics,
     BookingNumStatistics,
@@ -30,6 +30,14 @@ class ClubDepositAdmin(admin.ModelAdmin):
         }),
     )
 
+@admin.register(BookingDuration)
+class BookingDurationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'club', 'duration')
+    list_filter = ('club',)
+    search_fields = ('club__name',)
+    ordering = ('club', 'duration')
+    list_select_related = ('club',)
+    autocomplete_fields = ('club',)
 
 @admin.register(ClubStaff)
 class ClubStaffAdmin(admin.ModelAdmin):

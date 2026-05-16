@@ -29,6 +29,43 @@ from .serializers import (ClubManagerSerializer, WeekdayPricingSerializer,
                         ReadEquipmentSerializer, CreateClubEquipmentSerializer, 
                         ShowClubEquipmentSerializer, BookingDurationSerializer, ClubDepositSerializer)
 
+from django.db.models import Count, Q
+from dashboard_manage.models import Pitch
+import datetime
+
+
+class PendingBookingsCountView(APIView):
+
+    def get(self, request):
+        club_id = request.auth.get('club_id')
+
+        booking_filter = Q(booking__status=BookingStatus.PENDING_MANAGER)
+
+        date_str = request.query_params.get('date')
+        if date_str is not None:
+            try:
+                date = datetime.date.fromisoformat(date_str)  # expects YYYY-MM-DD
+            except ValueError:
+                raise ValidationError({'date': 'صيغة التاريخ غير صحيحة، يجب أن تكون YYYY-MM-DD.'})
+            booking_filter &= Q(booking__date=date)
+
+        pitches = (
+            Pitch.objects
+            .filter(club_id=club_id, is_deteted=False)
+            .annotate(pending_count=Count('booking', filter=booking_filter))
+            .values('id', 'name', 'pending_count')
+            .order_by('name')
+        )
+
+        total = sum(p['pending_count'] for p in pitches)
+
+        return Response({
+            'total_pending': total,
+            'pitches': list(pitches),
+        })
+
+
+
 class ClubManagerView(APIView):
 
 
@@ -123,7 +160,7 @@ class DatePricingViewSet(_BasePricingViewSet):
     serializer_class = DatePricingSerializer
 
     def get_queryset(self):
-        now = timezone.now()
+        now = timezone.localtime(timezone.now())
         current_date = now.date()
         return ClubPricing.objects.filter(
             club=self.get_club(), 
@@ -164,7 +201,7 @@ class PitchViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        now = timezone.now()
+        now = timezone.localtime(timezone.now())
         today = now.date()
         current_time = now.time()
         

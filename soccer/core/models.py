@@ -144,7 +144,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         """Calculate user's age based on birthday"""
         if not self.birthday:
             return None
-        today = timezone.now().date()
+        today = timezone.localtime(timezone.now()).date()
         return today.year - self.birthday.year - (
             (today.month, today.day) < (self.birthday.month, self.birthday.day)
         )
