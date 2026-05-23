@@ -12,7 +12,9 @@ class ShowChallengeTeamService:
                             user_id: str, *
                             , name: str | None = None, min_avg_age: int | None = None,
                             max_avg_age: int | None = None,
-                            governorate: int | None = None,     
+                            governorate: int | None = None,    
+                            members: int | None = None,
+ 
                             ):
 
         if not Team.objects.filter(id=team_id, captain_id=user_id).exists():
@@ -64,5 +66,7 @@ class ShowChallengeTeamService:
 
         if governorate is not None:                          
             qs = qs.filter(governorate=governorate)
+        if members is not None:                         
+            qs = qs.filter(active_member_count=members)
 
         return qs

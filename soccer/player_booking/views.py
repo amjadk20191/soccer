@@ -34,12 +34,13 @@ from player_booking.models import BookingStatus
 from .services.booking_detail_service import UserBookingDetailService
 from .pagination import MyBookingPagination
 from .services.pending_action_service import PendingActionService
+from core.permission import IsPlayerPermission, IsClubOwnerPermission, IsClubStaffOrOwnerPermission
 
 from dashboard_booking.services.BookingService import BookingService
 
 
 class PlayerConvertBookingAPIView(generics.GenericAPIView):
-
+    permission_classes = [IsPlayerPermission]
     def patch(self, request, pk):
 
         BookingService.owner_update_booking_status(
@@ -60,7 +61,7 @@ class PlayerConvertBookingAPIView(generics.GenericAPIView):
         )
 
 class PendingActionListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission]
     serializer_class   = PendingActionSerializer
 
     def get_queryset(self):
@@ -68,6 +69,7 @@ class PendingActionListView(generics.ListAPIView):
     
 
 class UserBookingDetailView(generics.RetrieveAPIView):
+    permission_classes = [IsPlayerPermission]
     serializer_class   = BookingDetailSerializer
 
     def get_object(self):
@@ -100,6 +102,7 @@ class UserBookingDetailView(generics.RetrieveAPIView):
 
 
 class UserBookingListView(generics.GenericAPIView):
+    permission_classes = [IsPlayerPermission]
     serializer_class = UserBookingSerializer
     pagination_class = MyBookingPagination
 
@@ -168,6 +171,7 @@ class StatusKeysForUserBookingListAPIView(APIView):
         })
 
 class ActiveClubListAPIView(generics.ListAPIView):
+    permission_classes = [IsPlayerPermission]
     serializer_class = ClubListSerializer
     pagination_class = ClubPagination
 
@@ -221,7 +225,7 @@ def ClubOpeningPrices(request):
     """
     GET: for list all opening time and the price for each pitch for club for next X days
     """
-
+    permission_classes = [IsPlayerPermission]
     input_serializer = ClubIDFilterSerializer(data=request.query_params)
     input_serializer.is_valid(raise_exception=True)
     params = input_serializer.validated_data
@@ -235,12 +239,12 @@ def ClubOpeningPrices(request):
 
 
 class BookingCreateForUser(generics.CreateAPIView):
-    # permission_classes = [IsAuthenticated, IsClubManager]
+    permission_classes = [IsPlayerPermission]
 
     serializer_class = BookingCreateForUserSerializer
 
 class CouponCreateView(APIView):
-    # permission_classes = [IsAdminUser]
+    permission_classes = [IsClubStaffOrOwnerPermission]
 
     def post(self, request):
         serializer = CouponSerializer(data=request.data)
@@ -261,7 +265,7 @@ class CouponCreateView(APIView):
         return Response(CouponSerializer(coupon).data, status=status.HTTP_201_CREATED)
 
 class ShowBookingDurationForClub(APIView):
-    
+    permission_classes = [IsPlayerPermission]
     def get(self, request, club_id):
         duration = BookingDuration.objects.values("duration").filter(club_id=club_id)
 
@@ -269,7 +273,7 @@ class ShowBookingDurationForClub(APIView):
 
 
 class ShowBookingDepositForClub(APIView):
-    
+    permission_classes = [IsPlayerPermission]
     def get(self, request, club_id):
         duration = ClubDeposit.objects.values("deposit_percent", "id").filter(club_id=club_id)
 
@@ -338,6 +342,7 @@ class ShowBookingDepositForClub(APIView):
 
 
 class PitchSearchView(APIView):
+    permission_classes = [IsPlayerPermission]
     def post(self, request):
         serializer = PitchSearchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -370,7 +375,7 @@ class PitchSearchView(APIView):
 
 class ConsolidatedBookingListViewAlt(APIView):
     """Alternative approach using helper method"""
-    
+    permission_classes = [IsPlayerPermission]
     serializer_class = ConsolidatedBookingQuerySerializer
     
     def get(self, request):
@@ -389,7 +394,7 @@ class ConsolidatedBookingListViewAlt(APIView):
 
 
 class EquipmentAvailabilityForUserView(APIView):
-    
+    permission_classes = [IsPlayerPermission]
     def get(self, request):
         query_serializer = EquipmentAvailabilityQueryForUserSerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)
@@ -419,7 +424,7 @@ class EquipmentAvailabilityForUserView(APIView):
     
 class ReviewCreateView(generics.CreateAPIView):
     serializer_class   = ReviewCreateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission]
 
     def perform_create(self, serializer):
         serializer.save()
@@ -427,6 +432,7 @@ class ReviewCreateView(generics.CreateAPIView):
 
 class ClubReviewListView(generics.ListAPIView):
     """List all reviews for a specific club"""
+    permission_classes = [IsClubStaffOrOwnerPermission, IsPlayerPermission]
     serializer_class = ReviewListSerializer
 
     def get_queryset(self):
@@ -438,7 +444,7 @@ class ClubReviewListView(generics.ListAPIView):
 
     
 class BookingPriceForUserAPIView(APIView):
-    
+    permission_classes = [IsPlayerPermission]
     def post(self, request):
         serializer = BookingPriceRequestForUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

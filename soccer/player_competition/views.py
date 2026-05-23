@@ -25,6 +25,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .services.PlayerChallengesService import PlayerChallengesService
 from .services.TeamChallengesService import TeamChallengesService
+from core.permission import IsPlayerPermission, IsClubOwnerPermission, IsClubStaffOrOwnerPermission
 
 VALID_RESULTS = [
             'قريباً',
@@ -54,6 +55,7 @@ class BaseChallengeMixin:
 class TeamChallengesView(BaseChallengeMixin, ListAPIView):
     serializer_class = TeamChallengeSerializer
     pagination_class = TeamChallengesPagination
+    permission_classes = [IsPlayerPermission]
 
     def get_queryset(self):
         return TeamChallengesService.get_team_challenges(
@@ -70,6 +72,7 @@ class TeamChallengesView(BaseChallengeMixin, ListAPIView):
 class PlayerChallengesView(BaseChallengeMixin, ListAPIView):
     serializer_class = PlayerChallengeListSerializer
     pagination_class = PlayerChallengesPagination
+    permission_classes = [IsPlayerPermission]
 
     def get_queryset(self):
         return PlayerChallengesService.get_player_challenges(
@@ -79,7 +82,8 @@ class PlayerChallengesView(BaseChallengeMixin, ListAPIView):
 
 class ChallengeDetailView(generics.RetrieveAPIView):
     serializer_class   = ChallengeDetailSerializer
-
+    permission_classes = [IsPlayerPermission]
+    
     def get_object(self):
         return ChallengeDetailService.get_challenge_detail(
             challenge_id=self.kwargs['challenge_id']
@@ -87,7 +91,8 @@ class ChallengeDetailView(generics.RetrieveAPIView):
 
 class TeamDetailView(generics.RetrieveAPIView):
     serializer_class   = TeamDetailSerializer
-
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+    
     def get_object(self):
         return TeamDetailService.get_team_detail(
             team_id=self.kwargs['team_id']
@@ -95,7 +100,7 @@ class TeamDetailView(generics.RetrieveAPIView):
     
 class PlayerProfileView(generics.RetrieveAPIView):
     serializer_class = PlayerProfileSerializer
-
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
     def get_object(self):
         team_id = self.request.query_params.get('team_id') or None
         player, team_context = PlayerProfileService.get_player_profile(
@@ -114,17 +119,20 @@ class PlayerProfileView(generics.RetrieveAPIView):
 
 class ScoreSubmissionView(generics.CreateAPIView):
     serializer_class   = ScoreSubmissionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission]
     
     
 class ChallengeTeamsView(ListAPIView):
     serializer_class = ShowChallengeTeamsSerializer
     pagination_class = ChallengeTeamsPagination
-
+    permission_classes = [IsPlayerPermission]
+    
     def get_queryset(self):
         min_avg_age = self._get_min_avg_age()
         max_avg_age = self._get_max_avg_age()
         self._validate_age_range(min_avg_age, max_avg_age)
+        members  = self._get_members()
+
 
         return ShowChallengeTeamService.get_challenge_teams(
             team_id     = self.kwargs['team_id'],
@@ -133,9 +141,22 @@ class ChallengeTeamsView(ListAPIView):
             min_avg_age = min_avg_age,
             max_avg_age = max_avg_age,
             governorate = self._get_governorate(), 
+            members  = members
         )
     
-    def _get_governorate(self) -> int | None:           # ← add
+    def _get_members(self) -> int | None:      
+        raw = self.request.query_params.get('members')
+        if raw is None:
+            return None
+        try:
+            value = int(raw)
+            if value <= 0:
+                raise ValueError
+            return value
+        except ValueError:
+            raise ValidationError({'error': 'يجب أن يكون الحد الأدنى لعدد الأعضاء عددًا صحيحًا موجبًا.'})
+
+    def _get_governorate(self) -> int | None:     
         raw = self.request.query_params.get('governorate')
         if raw is None:
             return None
@@ -189,7 +210,7 @@ class CreateChallengeAPIView(APIView):
     POST API to create a new match challenge between two teams.
     """
     # Ensure only logged-in users can hit this endpoint
-    # permission_classes = [IsAuthenticated] 
+    permission_classes = [IsPlayerPermission]
     @transaction.atomic
     def post(self, request, *args, **kwargs):
         # 1. Initialize the serializer with the incoming JSON data
@@ -239,7 +260,7 @@ class PendingChallengeListView(APIView):
     Returns all PENDING_TEAM challenges for the given team.
     Only the team captain can call this.
     """
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission]
 
     def get(self, request, team_id):
         challenges = GetPendingChallengesService.execute(
@@ -258,7 +279,7 @@ class ChallengeReplyView(APIView):
 
     Only the captain of the challenged team can call this.
     """
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission]
 
     def post(self, request, challenge_id):
         serializer = ChallengeReplySerializer(data=request.data)
@@ -285,7 +306,7 @@ class SentChallengeListView(APIView):
     Returns all live challenges sent BY the given team.
     Only the team captain can call this.
     """
-
+    permission_classes = [IsPlayerPermission]
     def get(self, request, team_id):
         challenges = GetSentChallengesService.execute(
             team_id            = team_id,
@@ -302,7 +323,7 @@ class ChallengeCancelView(APIView):
     Cancels a challenge the captain's team sent.
     Only the captain of the *sending* team can call this.
     """
-
+    permission_classes = [IsPlayerPermission]
     def post(self, request, challenge_id):
         challenge = CancelChallengeService.execute(
             challenge_id       = challenge_id,

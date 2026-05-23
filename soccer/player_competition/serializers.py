@@ -272,7 +272,7 @@ class ChallengeHistorySerializer(serializers.Serializer):
         end_naive = datetime.datetime.combine(obj.date, obj.end_time)
         end_dt = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
       
-        if not obj.score_finalized:
+        if (not obj.score_finalized) and end_dt > tz.now():
             return 'قريباً'
         if (not obj.score_finalized) and (not end_dt > tz.now()):
             return 'لم_يتم_التصويت'
@@ -393,7 +393,7 @@ class PlayerChallengeSerializer(serializers.Serializer):
         challenge = obj.challenge
         end_naive = datetime.datetime.combine(challenge.date, challenge.end_time)
         end_dt = tz.make_aware(end_naive) if tz.is_naive(end_naive) else end_naive
-        if not challenge.score_finalized:
+        if (not challenge.score_finalized) and end_dt > tz.now():
             return 'قريباً'
         if (not challenge.score_finalized) and (not end_dt > tz.now()):
             return 'لم_يتم_التصويت'

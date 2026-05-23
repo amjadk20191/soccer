@@ -3,7 +3,6 @@ from django.core.validators import FileExtensionValidator
 
 from dashboard_manage.models import Club
 from core.utils import upload_to_model_name
-
 import uuid
 
 class Tag(models.Model):
@@ -119,3 +118,30 @@ class Transaction(models.Model):
     def __str__(self) -> str:
         sign = "+" if self.direction == self.Direction.IN else "-"
         return f"{self.name}  {sign}{self.amount} {self.currency}  ({self.date})"
+    
+
+
+
+class ClubPayout(models.Model):
+    """
+    Records each money transfer MATCH makes to a club.
+    balance_owed = total_collected - sum(ClubPayout.amount) per club.
+    """
+    id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    club       = models.ForeignKey(Club, on_delete=models.PROTECT, related_name='payouts')
+    amount     = models.DecimalField(max_digits=12, decimal_places=2)
+    date       = models.DateField()                          # date the transfer was made
+    notes      = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    done_by = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = 'dashboard_manage_clubpayout'
+        ordering = ['-date', '-created_at']
+        indexes = [
+            models.Index(fields=['club']),          # fast per-club sum
+            models.Index(fields=['date']),
+        ]
+
+    def __str__(self):
+        return f"Payout {self.club.name} — {self.amount} on {self.date}"

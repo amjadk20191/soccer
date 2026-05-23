@@ -3,7 +3,8 @@ from rest_framework.exceptions import PermissionDenied, NotFound, ValidationErro
 from dashboard_booking.services.PricingService import PricingService
 from player_competition.services.CreateChallengeService import CreateChallengeService
 from core.services.notification_service import NotificationService
-
+from django.utils import timezone
+import datetime
 from ..models import Challenge, ChallengeStatus
 from player_booking.models import Booking, BookingStatus, PayStatus
 from django.db.models import Count, Q
@@ -85,6 +86,19 @@ class ReplyChallengeService:
 
     @staticmethod
     def _accept(challenge: Challenge) -> Challenge:
+
+        challenge_start = timezone.make_aware(
+                datetime.datetime.combine(challenge.date, challenge.start_time))
+
+        if challenge_start <= timezone.now():
+            # Auto-reject so the challenge doesn't stay PENDING_TEAM forever
+            Challenge.objects.filter(id=challenge.id).update(
+                status=ChallengeStatus.REJECTED,
+            )
+            challenge.status = ChallengeStatus.REJECTED
+            raise ValidationError({"error": "لا يمكن قبول التحدي لأن وقت الملعب قد مضى."})
+
+
         with transaction.atomic():
 
             # ── Query 2: one shot — active players + captain of sending team ──

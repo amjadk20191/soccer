@@ -4,6 +4,63 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from .models import Tag, Feature, RequestErrorLog
 
+from .models import ClubPayout
+
+
+@admin.register(ClubPayout)
+class ClubPayoutAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'club',
+        'amount',
+        'date',
+        'done_by',
+        'created_at',
+    )
+
+    list_filter = (
+        'date',
+        'created_at',
+        'club',
+    )
+
+    search_fields = (
+        'club__name',
+        'notes',
+        'done_by',
+    )
+
+    ordering = (
+        '-date',
+        '-created_at',
+    )
+
+    readonly_fields = (
+        'id',
+        'created_at',
+    )
+
+    autocomplete_fields = (
+        'club',
+    )
+
+    list_per_page = 25
+
+    date_hierarchy = 'date'
+
+    fieldsets = (
+        ('Payout Info', {
+            'fields': ('club', 'amount', 'date')
+        }),
+        ('Metadata', {
+            'fields': ('done_by', 'notes')
+        }),
+        ('System Info', {
+            'fields': ('id', 'created_at'),
+        }),
+    )
+
+
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):

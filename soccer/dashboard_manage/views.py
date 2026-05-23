@@ -21,6 +21,7 @@ from dashboard_manage.models import (
 )
 from collections import defaultdict
 
+from core.permission import IsPlayerPermission, IsClubOwnerPermission, IsClubStaffOrOwnerPermission
 
 from .models import Club, ClubPricing, Pitch, Equipment, ClubEquipment, BookingDuration, PitchTypes, ClubDeposit
 from .serializers import (ClubManagerSerializer, WeekdayPricingSerializer,
@@ -35,7 +36,7 @@ import datetime
 
 
 class PendingBookingsCountView(APIView):
-
+    permission_classes = [IsClubStaffOrOwnerPermission]
     def get(self, request):
         club_id = request.auth.get('club_id')
 
@@ -68,7 +69,7 @@ class PendingBookingsCountView(APIView):
 
 class ClubManagerView(APIView):
 
-
+    permission_classes = [IsClubOwnerPermission]
     serializer_class = ClubManagerSerializer
     parser_classes = [parsers.MultiPartParser, parsers.FormParser, parsers.JSONParser]
 
@@ -118,6 +119,7 @@ class ClubManagerView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class BookingDurationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     serializer_class = BookingDurationSerializer
     def get_queryset(self):
         return BookingDuration.objects.filter(
@@ -128,6 +130,7 @@ class BookingDurationViewSet(viewsets.ModelViewSet):
 
 
 class ClubDepositViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     serializer_class = ClubDepositSerializer
     def get_queryset(self):
         return ClubDeposit.objects.filter(
@@ -137,7 +140,7 @@ class ClubDepositViewSet(viewsets.ModelViewSet):
 
 
 class _BasePricingViewSet(viewsets.ModelViewSet):
-
+    
     def get_club(self):
         try:
             return self.request.auth.get('club_id') 
@@ -148,6 +151,7 @@ class _BasePricingViewSet(viewsets.ModelViewSet):
         serializer.save(club=self.get_club())
 
 class WeekdayPricingViewSet(_BasePricingViewSet):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     serializer_class = WeekdayPricingSerializer
 
     def get_queryset(self):
@@ -157,6 +161,7 @@ class WeekdayPricingViewSet(_BasePricingViewSet):
         )
 
 class DatePricingViewSet(_BasePricingViewSet):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     serializer_class = DatePricingSerializer
 
     def get_queryset(self):
@@ -178,7 +183,7 @@ class GetPitchesTypesView(APIView):
         return Response(types)
 
 class PitchViewSet(viewsets.ModelViewSet):
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsClubStaffOrOwnerPermission]
 
     def get_queryset(self):
         club_id = self.request.auth.get('club_id')
@@ -251,10 +256,12 @@ class PitchViewSet(viewsets.ModelViewSet):
     
 
 class EquipmentGenericsList(generics.ListAPIView):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     serializer_class = ReadEquipmentSerializer
     queryset = Equipment.objects.all()
 
 class ClubEquipmentGenericsList(viewsets.ModelViewSet):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     serializer_class = ReadEquipmentSerializer
     
     def get_queryset(self):
@@ -343,7 +350,7 @@ class RevenueReportView(APIView):
         "grand_total": "5600.00"
     }
     """
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubOwnerPermission]
 
     def get(self, request):
         club = _get_club(request)
@@ -427,7 +434,7 @@ class BookingCountsReportView(APIView):
         }
     }
     """
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubOwnerPermission]
 
     def get(self, request):
         club = _get_club(request)
@@ -532,7 +539,7 @@ class HourlyUtilisationReportView(APIView):
         ]
     }
     """
-
+    permission_classes = [IsClubStaffOrOwnerPermission]
     def get(self, request):
         club               = _get_club(request)
         date_from, date_to = _parse_date_range(request)
@@ -622,7 +629,7 @@ class EquipmentSalesReportView(APIView):
         ]
     }
     """
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsClubOwnerPermission]
 
     def get(self, request):
         club = _get_club(request)

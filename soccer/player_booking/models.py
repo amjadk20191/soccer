@@ -26,12 +26,12 @@ class BookingStatus(models.IntegerChoices):
     CHECK_PAY = 12, _('بانتظار_تأكبد_الدفع')
 
 class PayStatus(models.IntegerChoices):
-    LATER = 1, _('لاحقا')
-    DEPOSIT_ONLINE = 6, _('دفعة مقدمة')
-    ONLINE = 3, _('اونلاين')
-    CASH = 4, _('نقدا')
-    UNKNOWN = 5, _('غير معروف')
+    LATER = 1, _('لاحقاً')
     DEPOSIT_CASH = 2, _('دفعة مقدمة')
+    ONLINE = 3, _('اونلاين')
+    CASH = 4, _('نقداً')
+    UNKNOWN = 5, _('غير معروف')
+    DEPOSIT_ONLINE = 6, _('دفعة مقدمة عبر الدفع الإلكتروني')
 
 
 class Coupon(models.Model):

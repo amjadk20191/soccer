@@ -72,12 +72,9 @@ class UserBookingDetailService:
             raise NotFound({"error": "الحجز غير موجود."})
 
         is_direct_booker = str(booking.player_id) == str(user_id)
-        is_challenge_player = any(
-            str(cp.player_id) == str(user_id)
-            for cp in booking.challenge_players
-        )
 
-        if not is_direct_booker and not is_challenge_player:
+
+        if not is_direct_booker:
             raise PermissionDenied({"error": "ليس لديك صلاحية لعرض هذا الحجز."})
 
         # ── resolve player's team side ─────────────────────────────────────────
@@ -85,6 +82,7 @@ class UserBookingDetailService:
 
         if booking.is_challenge and booking.challenges:
             challenge = booking.challenges[0]
+            is_challenge_player = False
 
             if booking.status == BookingStatus.PENDING_MANAGER:
                 # player not yet in ChallengePlayerBooking → look in TeamMember
@@ -100,11 +98,17 @@ class UserBookingDetailService:
                 )
                 if member:
                     booking._player_team_id = str(member.team_id)
+                    is_challenge_player = True
+
             else:
                 # player already registered in ChallengePlayerBooking (already prefetched)
                 for cp in booking.challenge_players:
                     if str(cp.player_id) == str(user_id):
                         booking._player_team_id = str(cp.team_id)
+                        is_challenge_player = True
                         break
-
+            
+            if not is_challenge_player:
+                raise PermissionDenied({"error": "ليس لديك صلاحية لعرض هذا الحجز."})
+                    
         return booking

@@ -283,21 +283,13 @@ class TeamInvitationService:
         return invitations
     
     @classmethod
-    def search_users_by_username(cls, captain_id, current_team, username_filter, request, *, governorate=None, limit=10):
+    def search_users_by_username(cls, captain_id, current_team, username_filter, request, *, governorate=None):
         """
-        Search users by username filter and return top matching users.
-        
-        Args:
-            username_filter: String to filter usernames (case-insensitive)
-            limit: Maximum number of results to return (default: 10)
-            
-        Returns:
-            QuerySet of User objects matching the filter
+        Search users by username filter.
+        Returns full list — pagination is handled at the view level.
         """
         if not username_filter or not username_filter.strip():
-            return User.objects.none()
-        
-    
+            return []
 
         qs = (
             User.objects
@@ -306,15 +298,17 @@ class TeamInvitationService:
             .order_by('username')
         )
 
-        if governorate is not None:          # ← add
+        if governorate is not None:
             qs = qs.filter(governorate=governorate)
 
-        users = list(qs.values('id', 'username', 'full_name', 'image', 'governorate')[:limit])  # ← add governorate
+        # No [:limit] here — paginator slices the list in the view
+        users = list(qs.values('id', 'username', 'full_name', 'image', 'governorate'))
 
-        # Extract IDs to use in the next two queries
+        if not users:
+            return []
+
         user_ids = [u['id'] for u in users]
 
-        # 2. Second Query: Get IDs of users who are already members
         member_ids = set(
             TeamMember.objects.filter(
                 player_id__in=user_ids,
@@ -323,31 +317,33 @@ class TeamInvitationService:
             ).values_list('player_id', flat=True)
         )
 
-        # 3. Third Query: Get IDs of users with pending requests
         pending_requests = dict(
             Request.objects.filter(
                 player_id__in=user_ids,
                 team_id=current_team,
-                status=1  # Pending
+                status=1
             ).values_list('player_id', 'id')
         )
-        # Final Step: Map the statuses back to the user dictionaries (Python logic)
+
         for user in users:
             if user['id'] in member_ids:
                 user['connection_status'] = 'in_team'
                 user['request_id'] = None
             elif user['id'] in pending_requests:
                 user['connection_status'] = 'pending'
-                user['request_id'] = str(pending_requests[user['id']])  # UUID → string
+                user['request_id'] = str(pending_requests[user['id']])
             else:
                 user['connection_status'] = 'not'
                 user['request_id'] = None
 
-            if user['image']:
-                user['image'] = request.build_absolute_uri(settings.MEDIA_URL + user['image'])
-            else:
-                user['image'] = None
-            user['governorate'] = SyrianGovernorate(user['governorate']).label if user['governorate'] is not None else None
+            user['image'] = (
+                request.build_absolute_uri(settings.MEDIA_URL + user['image'])
+                if user['image'] else None
+            )
+            user['governorate'] = (
+                SyrianGovernorate(user['governorate']).label
+                if user['governorate'] is not None else None
+            )
 
         return users
     

@@ -36,7 +36,7 @@ class Challenge(models.Model):
     challenged_team = models.ForeignKey(Team, on_delete=models.CASCADE)
     pitch = models.ForeignKey(Pitch, on_delete=models.CASCADE)
     club = models.ForeignKey(Club, on_delete=models.CASCADE)
-    # created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    # done_by = models.ForeignKey(User, on_delete=models.CASCADE)
     result_team = models.PositiveSmallIntegerField(default=0)
     result_challenged_team = models.PositiveSmallIntegerField(default=0)
     status = models.PositiveSmallIntegerField(choices=ChallengeStatus.choices, default=ChallengeStatus.PENDING_TEAM)

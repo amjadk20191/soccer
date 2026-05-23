@@ -283,9 +283,9 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             opp_score = challenge.result_challenged_team if is_first_team else challenge.result_team
 
             if my_score > opp_score:
-                return 'فاز'
+                return 'فوز'
             if my_score < opp_score:
-                return 'خسر'
+                return 'خسارة'
             return 'تعادل'
         return None
 
@@ -703,7 +703,7 @@ class BookingCreateForUserSerializer(serializers.ModelSerializer):
             title="تم طلب حجز جديد",
             body=f"""
 تم انشاء حجز جديد في {validated_data['date']}
-من الساعة {validated_data['start_time']} الى {validated_data['end_time']}
+من الساعة {validated_data['start_time'].strftime('%H:%M')} الى {validated_data['end_time'].strftime('%H:%M')}
             """,
             notification_type='create_Booking',
             helper_id=booking.id,

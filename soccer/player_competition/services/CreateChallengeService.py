@@ -175,7 +175,7 @@ class CreateChallengeService:
             title="تم طلب تحدي جديد",
             body=f"""
 تم طلب تحدي جديد في {date}
-من الساعة {start_time} الى {end_time}
+من الساعة {start_time.strftime('%H:%M')} الى {end_time.strftime('%H:%M')}
 من فريق: {team.name}
             """,
             notification_type='create_challenge',

@@ -118,9 +118,9 @@ Q_CLUSTER = {
     'name': 'booking_app',
     'workers': 1 ,
     'poll': 300,
-    'timeout': 60,
-    'retry': 120,
-    'orm': 'default'
+    'timeout': 180,
+    'retry': 220,
+    'orm': 'default',
 }
 
 # Password validation

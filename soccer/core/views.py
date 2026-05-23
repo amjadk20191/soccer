@@ -18,7 +18,7 @@ from .services.UserServices import UserService, UserDeviceService
 from .models import AppVersion, Notification, User
 from typing import Any, Dict, List, Tuple, Optional
 from django.utils.decorators import method_decorator
-
+from .permission import IsPlayerPermission, IsClubStaffOrOwnerPermission ,IsClubOwnerPermission
 from .pagination import NotificationPagination
 
 
@@ -33,7 +33,7 @@ class SyrianGovernorateListAPI(APIView):
 
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
     pagination_class = NotificationPagination
 
     def get_queryset(self):
@@ -82,7 +82,8 @@ class NotificationListView(generics.ListAPIView):
 
 
 class UnreadNotificationCountAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def get(self, request):
         unread_count = Notification.objects.filter(
@@ -115,13 +116,15 @@ class RegisterUserAPIView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
 class UserDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission]
+
 
     def get(self, request):
         return Response(UserSerializer(request.user, context={'request': request}).data)
 
 class UserUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def patch(self, request):
         serializer = UpdateUserSerializer(data=request.data, partial=True)
@@ -130,7 +133,8 @@ class UserUpdateView(APIView):
         return Response(UserSerializer(updated_user, context={'request': request}).data)
 
 class UserDeviceView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def post(self, request):
         serializer = UserDeviceSerializer(data=request.data)
@@ -145,7 +149,8 @@ class UserDeviceView(APIView):
         return Response({'detail': 'Device removed successfully.'}, status=status.HTTP_204_NO_CONTENT)
 
 class TestNotificationView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def post(self, request):
         NotificationService.send_notification(
@@ -156,7 +161,8 @@ class TestNotificationView(APIView):
         return Response({'detail': 'Notification sent.'})
 
 class DeleteUserImageAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def delete(self, request):
         UserService.delete_user_image(request.user)
@@ -182,7 +188,8 @@ class CheckAvailabilityView(APIView):
 
 
 class NotificationMarkReadView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def post(self, request, notification_id):
         notification = Notification.objects.filter(
@@ -199,7 +206,8 @@ class NotificationMarkReadView(APIView):
 
 
 class NotificationMarkAllReadView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def post(self, request):
         Notification.objects.filter(
@@ -322,13 +330,14 @@ class VersionCheckView(GenericApiView):
         
         if latest_parsed > current_parsed:
             return True
-        if latest_parsed < current_parsed:
+        if latest_parsed <= current_parsed:
             return False
         
         return latest.build_number > current_build
 
 class NoteCreateView(APIView):
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsPlayerPermission, IsClubStaffOrOwnerPermission]
+
 
     def post(self, request):
         serializer = NoteSerializer(data=request.data)

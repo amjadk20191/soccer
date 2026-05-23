@@ -31,17 +31,19 @@ from dashboard_booking.services.ClubTimeForOwnerService import ClubTimeForOwnerS
 from dashboard_booking.services.EquipmentBookingService import EquipmentBookingService
 from django.db.models import Prefetch
 from rest_framework import generics 
-
+from core.permission import IsPlayerPermission, IsClubOwnerPermission, IsClubStaffOrOwnerPermission
 
 
 class ClosedBookingCreateView(generics.CreateAPIView):
+    permission_classes = [IsClubStaffOrOwnerPermission]
+    
     serializer_class = ClosedBookingCreateSerializer
 
 
 
 
 class BookingViewSet(viewsets.ModelViewSet):
-    # permission_classes = [IsAuthenticated, IsClubManager]
+    permission_classes = [IsClubStaffOrOwnerPermission]
     http_method_names = ['get', 'post', 'patch']
 
     
@@ -199,7 +201,7 @@ class BookingViewSet(viewsets.ModelViewSet):
             str(BookingStatus.PENDING_MANAGER.label): [
                 (str(BookingStatus.PAY.label), BookingStatus.PAY.value),
                 (str(BookingStatus.REJECT.label), BookingStatus.REJECT.value),
-                (str(BookingStatus.PENDING_PLAYER.label), BookingStatus.PENDING_PLAYER.value),
+                # (str(BookingStatus.PENDING_PLAYER.label), BookingStatus.PENDING_PLAYER.value),
             ], 
             str(BookingStatus.COMPLETED.label): [
                 (str(BookingStatus.DISPUTED.label), BookingStatus.DISPUTED.value),
@@ -260,6 +262,7 @@ class BookingViewSet(viewsets.ModelViewSet):
 
 
 class BookingPriceAPIView(APIView):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     
     def post(self, request):
         serializer = BookingPriceRequestSerializer(data=request.data)
@@ -303,6 +306,7 @@ class BookingPriceAPIView(APIView):
 
 
 class BookingstatusAPIView(APIView):
+    permission_classes = [IsClubStaffOrOwnerPermission]
     def get(self, request):
 
             
@@ -322,7 +326,7 @@ class BookingstatusAPIView(APIView):
         
 
 class ClubOpeningPrices(APIView):
-    
+    permission_classes = [IsClubOwnerPermission]
     def get(self, request):
         opening_time_with_pitches_prices = ClubTimeForOwnerService.get_opening_time_with_pitches_prices(request.auth.get('club_id'), settings.MAX_NUM_DAY_BEFORE_BOOKING, request)
         return Response(opening_time_with_pitches_prices)
@@ -330,7 +334,7 @@ class ClubOpeningPrices(APIView):
 
 
 class EquipmentAvailabilityView(APIView):
-    
+    permission_classes = [IsClubStaffOrOwnerPermission]
     def get(self, request):
         query_serializer = EquipmentAvailabilityQuerySerializer(data=request.query_params)
         query_serializer.is_valid(raise_exception=True)

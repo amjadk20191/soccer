@@ -23,6 +23,8 @@ from .serializers import (
     DeleteSendInviteSerializer
 )
 from player_team.services import TeamInvitationService, TeamService
+from .pagination import UserSearchPagination
+from core.permission import IsPlayerPermission, IsClubOwnerPermission, IsClubStaffOrOwnerPermission
 
 
 class TeamImageListAPIView(generics.ListAPIView):
@@ -40,7 +42,7 @@ class UserTeamsListView(APIView):
     Shows: team_id, team_name, is_captain, is_active, joined_at
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def get(self, request):
         """
         Get all teams the user belongs to.
@@ -103,7 +105,7 @@ class TeamDetailsView(APIView):
     User must be a member of the team to view details.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def get(self, request, team_id):
         """
         Get detailed team information including team members.
@@ -188,7 +190,7 @@ class InvitePlayerView(APIView):
     Creates a Request with PENDING status and null recruitment_post.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def post(self, request, team_id):
         """
         Invite a player to join the team by username.
@@ -229,7 +231,7 @@ class RespondToInvitationView(APIView):
     If accepted, creates a TeamMember with ACTIVE status.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def post(self, request):
         """
         Accept or reject a team invitation.
@@ -267,7 +269,7 @@ class MyInvitationsView(APIView):
     Returns all invitations (pending, accepted, rejected) sent to the user.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def get(self, request):
         """
         Get all invitation requests for the authenticated user.
@@ -288,7 +290,7 @@ class MyInvitationsView(APIView):
 
 
 class teamSendInvitationsView(APIView):
-
+    permission_classes = [IsPlayerPermission]
     def get(self, request, team_id):
         invitations = TeamInvitationService.get_invitations_send_by_team(team_id=team_id)
         serializer = ShowTeamInvitationSendSerializer(invitations, many=True, context={'request': request})
@@ -296,42 +298,36 @@ class teamSendInvitationsView(APIView):
         return Response(serializer.data,
              status=status.HTTP_200_OK)
 
-class SearchUsersView(APIView):
-    """
-    API endpoint to search users by username filter.
-    
-    Returns top 10 matching users based on username filter.
-    """
 
-    
+class SearchUsersView(APIView):
+    permission_classes = [IsPlayerPermission]
     def get(self, request, team_id):
-        """
-        Search users by username filter.
-        
-        Query params:
-            username: Username filter (required)
-        """
-        # Validate query parameter
         captain_id = request.user.id
 
         serializer = UserSearchSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
+
         username_filter = serializer.validated_data['username']
-        
-        # Search users using service (returns top 10)
+        governorate     = serializer.validated_data.get('governorate', None)
+
         users = TeamInvitationService.search_users_by_username(
             captain_id,
             team_id,
             username_filter,
             request,
-            governorate=serializer.validated_data.get('governorate', None),
-            limit=10
+            governorate=governorate,
         )
-        
-        
-        return Response(
-            users 
-         , status=status.HTTP_200_OK)
+
+        paginator = UserSearchPagination()
+        page = paginator.paginate_queryset(users, request, view=self)
+
+        # paginate_queryset returns None if pagination is not configured
+        # (won't happen with PageNumberPagination but safe to guard)
+        if page is not None:
+            return paginator.get_paginated_response(page)
+
+        return Response(users, status=status.HTTP_200_OK)
+    
 
 
 class RemovePlayerView(APIView):
@@ -342,7 +338,7 @@ class RemovePlayerView(APIView):
     Sets player status to OUT and records leave_at timestamp.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def post(self, request, team_id):
         """
         Remove a player from the team.
@@ -386,7 +382,7 @@ class LeaveTeamView(APIView):
     Sets status to OUT and records leave_at timestamp.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def post(self, request, team_id):
         """
         Player leaves the team (removes themselves).
@@ -420,7 +416,7 @@ class CreateTeamView(APIView):
     Creates both Team and TeamMember records.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def post(self, request):
         """
         Create a new team.
@@ -460,6 +456,7 @@ class CreateTeamView(APIView):
 class UpdateTeamView(generics.UpdateAPIView):
     http_method_names=['patch',]
     serializer_class = TeamUpdateSerializer
+    permission_classes = [IsPlayerPermission]
 
     def get_queryset(self):
         return Team.objects.filter(captain=self.request.user, is_active=True)
@@ -473,7 +470,7 @@ class DeleteTeamView(APIView):
     Only the team captain can deactivate the team.
     """
 
-    
+    permission_classes = [IsPlayerPermission]
     def delete(self, request, team_id):
         """
         Deactivate a team (soft delete).
@@ -497,6 +494,7 @@ class DeleteTeamView(APIView):
 
 class DeleteSendInviteView(APIView):
 
+    permission_classes = [IsPlayerPermission]
     def delete(self, request, team_id, invite_id):
 
         # Get user ID from JWT token (fast access)
