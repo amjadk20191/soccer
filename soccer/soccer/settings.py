@@ -75,7 +75,7 @@ MIDDLEWARE = [
 load_dotenv()  # Load environment variables from .env file
 
 #FireBase  
-FIREBASE_PROJECT_ID = "matchtest-80d90"
+FIREBASE_PROJECT_ID = "soccer-dev-5b3fe"
 FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'match.json')
 
 
